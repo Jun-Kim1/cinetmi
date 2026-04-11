@@ -154,7 +154,6 @@
 
     .bo-scroll-outer {
       overflow-x: auto; overflow-y: visible; padding-bottom: 1.4rem; cursor: grab;
-      -webkit-overflow-scrolling: touch;
       scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.06) transparent;
       scroll-snap-type: x proximity;
       overscroll-behavior-x: contain;
@@ -163,7 +162,7 @@
     .bo-scroll-outer::-webkit-scrollbar { height: 3px; }
     .bo-scroll-outer::-webkit-scrollbar-thumb { background: rgba(255,255,255,.07); border-radius: 9999px; }
     .bo-track {
-      display: flex; gap: .9rem; align-items: flex-end;
+      display: flex; gap: .9rem; align-items: stretch;
       padding: .5rem .25rem 0; width: max-content;
     }
 
@@ -711,6 +710,7 @@
   const acDrop  = document.getElementById('ac-drop');
   const boTrack = document.getElementById('bo-track');
   const boScroll= document.getElementById('bo-scroll');
+  let boxLoadToken = 0;
 
   /* ─── HTML escape (XSS) ─── */
   function esc(s) {
@@ -868,21 +868,50 @@
     return card;
   }
 
+  function resetBoxOfficeScroll() {
+    boScroll.scrollLeft = 0;
+  }
+
+  function prepareBoxOfficeRender(resetScroll) {
+    if (resetScroll) resetBoxOfficeScroll();
+    boTrack.style.transition = 'none';
+    boTrack.style.opacity = '0';
+  }
+
+  function commitBoxOfficeRender(resetScroll) {
+    boTrack.offsetHeight;
+    requestAnimationFrame(() => {
+      if (resetScroll) resetBoxOfficeScroll();
+      boTrack.style.transition = 'opacity .5s ease';
+      boTrack.style.opacity = '1';
+    });
+  }
+
   /* ─── Load box office ─── */
-  async function loadBox() {
+  async function loadBox({ resetScroll = false } = {}) {
+    const loadToken = ++boxLoadToken;
+    prepareBoxOfficeRender(resetScroll);
     try {
       const data = await tfetch('/movie/now_playing?api_key=' + TMDB_KEY + '&language=ko-KR&region=KR');
+      if (loadToken !== boxLoadToken) return;
       const list = (data.results || []).slice(0, 10);
-      boTrack.style.opacity = '0';
       boTrack.innerHTML = '';
       list.forEach((m, i) => boTrack.append(makeCard(m, i + 1)));
-      requestAnimationFrame(() => {
-        boTrack.style.transition = 'opacity .5s ease';
-        boTrack.style.opacity = '1';
-      });
+      commitBoxOfficeRender(resetScroll);
     } catch(e) {
+      if (loadToken !== boxLoadToken) return;
+      if (resetScroll) resetBoxOfficeScroll();
+      boTrack.style.transition = 'none';
+      boTrack.style.opacity = '1';
       boTrack.innerHTML = '<p style="color:rgba(255,255,255,.2);font-size:.8rem;padding:.5rem 0">Failed to load chart data.</p>';
     }
+  }
+
+  function hydrateHomePage() {
+    loadBox({ resetScroll: true });
+    loadTrending();
+    loadTodayPick();
+    document.fonts.ready.then(runLogoAnim);
   }
 
   /* ─── Load trending chips ─── */
@@ -1514,11 +1543,13 @@
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   window.scrollTo(0, 0);
 
+  window.addEventListener('pageshow', (event) => {
+    if (!event.persisted) return;
+    loadBox({ resetScroll: true });
+  });
+
   /* ─── Init ─── */
-  loadBox();
-  loadTrending();
-  loadTodayPick();
-  document.fonts.ready.then(runLogoAnim);
+  hydrateHomePage();
 </script>
 </body>
 </html>

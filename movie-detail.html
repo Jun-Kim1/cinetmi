@@ -129,9 +129,35 @@
       animation: fadeUp .38s ease both;
     }
     .movie-card-inner { display: flex; align-items: stretch; }
+    .poster-shell {
+      position: relative; width: 230px; min-height: 320px; flex-shrink: 0;
+      overflow: hidden; background: #0a0b16;
+      border-right: 1px solid rgba(255,255,255,.06);
+    }
     #poster {
-      width: 230px; flex-shrink: 0; object-fit: cover; display: block;
-      border-right: 1px solid rgba(255,255,255,.06); background: #0a0b16;
+      width: 100%; height: 100%; object-fit: cover; display: block;
+      background: #0a0b16; opacity: 0;
+      transition: opacity .24s ease;
+    }
+    .poster-shell.is-ready #poster { opacity: 1; }
+    .poster-fallback {
+      position: absolute; inset: 0; display: grid; place-items: center;
+      padding: 1.2rem; text-align: center;
+      font-family: 'Bebas Neue', cursive;
+      font-size: .95rem; letter-spacing: .2em;
+      color: rgba(255,255,255,.26);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02)),
+        radial-gradient(circle at top, rgba(37,99,235,.18), transparent 45%),
+        #0a0b16;
+      transition: opacity .2s ease, color .2s ease;
+    }
+    .poster-shell.is-ready .poster-fallback {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .poster-shell.is-error .poster-fallback {
+      color: rgba(250,204,21,.68);
     }
     .movie-meta {
       flex: 1; padding: 1.4rem 1.5rem; display: flex; flex-direction: column; gap: 0; min-width: 0;
@@ -404,7 +430,8 @@
     }
     @media (max-width: 640px) {
       .movie-card-inner { flex-direction: column; }
-      #poster { width: 100%; height: 220px; border-right: none; border-bottom: 1px solid rgba(255,255,255,.06); }
+      .poster-shell { width: 100%; min-height: 220px; border-right: none; border-bottom: 1px solid rgba(255,255,255,.06); }
+      #poster { height: 220px; }
       .movie-title { font-size: 1.5rem; }
       .nav { padding: .78rem 1rem; }
       .wrap { padding: .9rem .9rem 2rem; }
@@ -418,6 +445,7 @@
     }
     @media (max-width: 400px) {
       .movie-title { font-size: 1.3rem; }
+      .poster-shell { min-height: 180px; }
       #poster { height: 180px; }
       .wrap { padding: .7rem .7rem 1.5rem; }
       .meta-val { font-size: .8rem; }
@@ -572,7 +600,10 @@
     <!-- Movie card -->
     <div class="movie-card">
       <div class="movie-card-inner">
-        <img id="poster" src="" alt="포스터" />
+        <div id="poster-shell" class="poster-shell is-loading">
+          <img id="poster" src="" alt="포스터" loading="eager" decoding="async" />
+          <div id="poster-fallback" class="poster-fallback" aria-live="polite">POSTER LOADING</div>
+        </div>
         <div class="movie-meta">
           <div id="m-badge"></div>
           <h1 id="ttl" class="movie-title"></h1>
@@ -639,6 +670,7 @@
   const TMDB_KEY  = 'f8a2a8ea141ae946e983a431a79b0c9b';
   const TMDB_BASE = 'https://api.themoviedb.org/3';
   const IMG_BASE  = 'https://image.tmdb.org/t/p/';
+  const POSTER_RETRY_LIMIT = 2;
   const SB_URL    = 'https://ecfcmaeprvjsvcuvnrcz.supabase.co';
   const SB_KEY    = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVjZmNtYWVwcnZqc3ZjdXZucmN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU4NzAwODUsImV4cCI6MjA5MTQ0NjA4NX0.zmBRumng5HW-oOSO_4Qj8IybpqT9Nddqx-jVeoBnIeM';
 
@@ -669,7 +701,9 @@
     vErr:   document.getElementById('v-err'),
     vDet:   document.getElementById('v-det'),
     errMsg: document.getElementById('err-msg'),
+    posterShell: document.getElementById('poster-shell'),
     poster:   document.getElementById('poster'),
+    posterFallback: document.getElementById('poster-fallback'),
     badge:    document.getElementById('m-badge'),
     ttl:      document.getElementById('ttl'),
     valDir:   document.getElementById('val-dir'),
@@ -801,6 +835,75 @@
     return `${y}-${m}-${day}`;
   }
 
+  let posterRequestToken = 0;
+
+  function setPosterState(state, message) {
+    el.posterShell.className = 'poster-shell';
+    if (state === 'loading') el.posterShell.classList.add('is-loading');
+    if (state === 'ready') el.posterShell.classList.add('is-ready');
+    if (state === 'error') el.posterShell.classList.add('is-error');
+    el.posterFallback.textContent = message;
+  }
+
+  function buildPosterUrl(path, attempt) {
+    const url = IMG_BASE + 'w500' + path;
+    return attempt === 0 ? url : `${url}?retry=${Date.now()}-${attempt}`;
+  }
+
+  function loadPosterWithRetry(path, title, requestToken, attempt) {
+    return new Promise((resolve) => {
+      const handleLoad = () => {
+        if (requestToken !== posterRequestToken) return resolve(false);
+        el.poster.onload = null;
+        el.poster.onerror = null;
+        el.poster.alt = title;
+        setPosterState('ready', '');
+        resolve(true);
+      };
+
+      const handleError = () => {
+        el.poster.onload = null;
+        el.poster.onerror = null;
+        if (requestToken !== posterRequestToken) return resolve(false);
+        if (attempt < POSTER_RETRY_LIMIT) {
+          setPosterState('loading', 'POSTER RETRYING');
+          resolve(loadPosterWithRetry(path, title, requestToken, attempt + 1));
+          return;
+        }
+        el.poster.removeAttribute('src');
+        el.poster.alt = title ? `${title} 포스터를 불러오지 못했습니다` : '포스터를 불러오지 못했습니다';
+        setPosterState('error', 'POSTER UNAVAILABLE');
+        resolve(false);
+      };
+
+      setPosterState('loading', attempt === 0 ? 'POSTER LOADING' : 'POSTER RETRYING');
+      el.poster.onload = handleLoad;
+      el.poster.onerror = handleError;
+      el.poster.src = buildPosterUrl(path, attempt);
+
+      if (el.poster.complete) {
+        if (el.poster.naturalWidth > 0) handleLoad();
+        else handleError();
+      }
+    });
+  }
+
+  function renderPoster(item) {
+    const title = item.title || item.name || '포스터';
+    const posterPath = item.poster_path;
+    const requestToken = ++posterRequestToken;
+
+    el.poster.alt = title;
+    el.poster.removeAttribute('src');
+
+    if (!posterPath) {
+      setPosterState('error', 'POSTER UNAVAILABLE');
+      return Promise.resolve(false);
+    }
+
+    return loadPosterWithRetry(posterPath, title, requestToken, 0);
+  }
+
   /* ─── Load media info ─── */
   async function loadMedia() {
     const ep   = isTV ? `/tv/${contentId}` : `/movie/${contentId}`;
@@ -817,11 +920,12 @@
     // Cinematic backdrop
     if (item.backdrop_path) {
       document.documentElement.style.setProperty('--bdrop', `url(${IMG_BASE}w1280${item.backdrop_path})`);
+    } else {
+      document.documentElement.style.removeProperty('--bdrop');
     }
 
     // Poster
-    el.poster.src = item.poster_path ? IMG_BASE + 'w500' + item.poster_path : '';
-    el.poster.alt = item.title || item.name || '';
+    renderPoster(item);
 
     // Badge
     el.badge.innerHTML = `<span class="media-badge ${isTV ? 'mb-tv' : 'mb-movie'}">${isTV ? '📺 TV 시리즈' : '🎬 영화'}</span>`;
