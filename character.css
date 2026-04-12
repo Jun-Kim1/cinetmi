@@ -12,6 +12,12 @@
   contain: strict;             /* full layout/paint/size isolation */
   -webkit-transform: translateZ(0); /* force Safari compositing layer */
   transform: translateZ(0);
+  /* Invisible by default but GPU layer is allocated at page load.
+     Toggling visibility never triggers a compositing layer rebuild. */
+  visibility: hidden;
+}
+.vibe-char-stage--active {
+  visibility: visible;
 }
 
 /* ── Base runner element (horizontal flying pose: 64×28 aspect) ── */
@@ -27,6 +33,11 @@
   left: 0; top: 0;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
+  /* Transparent base filter: keeps the filter compositing layer
+     permanently allocated. Changing filter values never causes
+     Safari to rebuild the compositing tree mid-animation. */
+  -webkit-filter: drop-shadow(0 0 0px rgba(0,0,0,0));
+  filter: drop-shadow(0 0 0px rgba(0,0,0,0));
 }
 
 /* ── Phase 1: Entrance — gentle glow ── */

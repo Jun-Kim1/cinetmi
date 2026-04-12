@@ -102,6 +102,36 @@
     };
   }
 
+  /* ── Shared DOM elements — created ONCE at page load so Safari pre-allocates
+     the GPU compositing layer before any animation starts.
+     Inserting position:fixed elements mid-session triggers Safari viewport
+     recalculation which clips elements near the top. ── */
+  var stage  = null;
+  var runner = null;
+
+  function initStage() {
+    stage = document.createElement('div');
+    stage.className = 'vibe-char-stage'; /* visibility:hidden via CSS default */
+    document.body.appendChild(stage);
+
+    runner = document.createElement('img');
+    runner.src = RUNNER_SRC;
+    runner.className = 'vibe-char-runner';
+    runner.alt = '';
+    runner.width  = SIZE_W;
+    runner.height = SIZE_H;
+    runner.draggable = false;
+    /* Park far off-screen — must not be at (0,0) or it flickers on load */
+    runner.style.transform = 'translate3d(-500px,-500px,0)';
+    stage.appendChild(runner);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initStage);
+  } else {
+    initStage();
+  }
+
   /* ── Create portal element ── */
   function makePortal(stage, x, y) {
     var p = document.createElement('div');
@@ -129,28 +159,22 @@
 
   /* ── Main show ── */
   function runShow() {
+    if (!stage || !runner) return; /* initStage not yet called — skip */
+
     var pos = getPositions();
 
-    /* Create isolated containment stage */
-    var stage = document.createElement('div');
-    stage.className = 'vibe-char-stage';
-    document.body.appendChild(stage);
-
-    /* Create runner */
-    var runner = document.createElement('img');
-    runner.src = RUNNER_SRC;
+    /* Reset runner: clear all animation classes, reset position */
     runner.className = 'vibe-char-runner';
-    runner.alt = '';
-    runner.width = SIZE_W;
-    runner.height = SIZE_H;
-    runner.draggable = false;
+    runner.style.opacity  = '';
     runner.style.transform = 'translate3d(' + pos.startX + 'px,' + pos.startY + 'px,0)';
-    stage.appendChild(runner);
+
+    /* Reveal the pre-existing stage (GPU layer already allocated) */
+    stage.classList.add('vibe-char-stage--active');
 
     /* Entrance portal */
     var portalIn = makePortal(stage, pos.portalEntryX, pos.portalY);
 
-    /* Force reflow */
+    /* Force reflow so CSS transition fires from the reset state */
     runner.offsetHeight;
 
     /* ═══ PHASE 1: ENTER — slide from left to idle position ═══ */
@@ -226,8 +250,12 @@
                 portalOut.classList.remove('vibe-char-portal-open');
                 portalOut.classList.add('vibe-char-portal-close');
                 setTimeout(function () {
-                  /* Remove entire stage — all children go with it */
-                  if (stage.parentNode) stage.parentNode.removeChild(stage);
+                  /* Remove portal; ghosts already self-remove after 300ms */
+                  if (portalOut.parentNode) portalOut.parentNode.removeChild(portalOut);
+                  /* Reset runner and hide stage — do NOT remove from DOM */
+                  runner.className = 'vibe-char-runner';
+                  runner.style.transform = 'translate3d(-500px,-500px,0)';
+                  stage.classList.remove('vibe-char-stage--active');
                 }, 300);
               }
             }
