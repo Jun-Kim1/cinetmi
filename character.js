@@ -142,6 +142,7 @@
     if (!runner) return;
     runner.className = 'vibe-char-runner';
     runner.style.opacity = '0';
+    runner.style.willChange = 'auto';
     runner.style.transform = 'translate3d(-500px,-500px,0)';
   }
 
@@ -201,6 +202,7 @@
     /* Reset runner: clear all animation classes, reset position */
     runner.className = 'vibe-char-runner';
     runner.style.opacity  = '';
+    runner.style.willChange = 'transform, opacity, filter';
     runner.style.transform = 'translate3d(' + pos.startX + 'px,' + pos.startY + 'px,0)';
 
     /* Stage is always in DOM and visible — no class toggle needed */

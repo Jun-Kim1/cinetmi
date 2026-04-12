@@ -448,6 +448,8 @@
     let exitStart = 0, sparked = false;
 
     ball.style.opacity = '1';
+    ball.style.willChange = 'transform, opacity';
+    letters.forEach(l => { l.style.willChange = 'transform'; });
 
     function impactLetter(el) {
       el.style.transition = 'transform 70ms cubic-bezier(.2,0,.6,1)';
@@ -469,9 +471,11 @@
         const dur = 0.55;
         if (elapsed >= dur) {
           ball.style.opacity = '0';
+          ball.style.willChange = 'auto';
           dead = true;
           /* Start infinite loop motion on each letter with stagger */
           letters.forEach((l, li) => {
+            l.style.willChange = 'auto';
             l.style.animation = '';
             l.style.animationDelay = `${(li * 0.4).toFixed(2)}s`;
             l.classList.add('alive');

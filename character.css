@@ -4,14 +4,11 @@
 .vibe-char-stage {
   position: fixed;
   top: 0; left: 0;
-  width: 0; height: 0;         /* zero footprint — no viewport recalculation in Safari */
+  width: 0; height: 0;
   margin: 0; padding: 0; border: 0;
   pointer-events: none;
   z-index: 9997;
-  overflow: visible;           /* children render outside, fixed to viewport boundary */
-  -webkit-transform: translateZ(0); /* stable GPU compositing layer from page load */
-  transform: translateZ(0);
-  /* Always visible: never toggled. Runner parks off-screen at (-500,-500). */
+  overflow: visible;
 }
 
 /* ── Base runner element (horizontal flying pose: 64×28 aspect) ── */
@@ -22,16 +19,10 @@
   height: 28px;
   margin: 0; padding: 0; border: 0;
   pointer-events: none;
-  will-change: transform, opacity, filter;
   opacity: 0;
   left: 0; top: 0;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
-  /* Transparent base filter: keeps the filter compositing layer
-     permanently allocated. Changing filter values never causes
-     Safari to rebuild the compositing tree mid-animation. */
-  -webkit-filter: drop-shadow(0 0 0px rgba(0,0,0,0));
-  filter: drop-shadow(0 0 0px rgba(0,0,0,0));
 }
 
 /* ── Phase 1: Entrance — gentle glow ── */
