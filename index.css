@@ -556,11 +556,7 @@
       .footer-copy { font-size: .42rem; letter-spacing: .06em; margin-top: .9rem; padding-top: .55rem; text-align: center; }
       .pick-tagline-text { font-size: .72rem; }
       .pick-action { font-size: .74rem; }
-      .pick-quote-copy {
-      font-size: .86rem; font-weight: 600; font-style: italic; line-height: 1.85;
-      color: #fde68a; letter-spacing: .025em;
-      text-shadow: 0 0 8px rgba(253,230,138,.48), 0 0 22px rgba(253,230,138,.2);
-    }
+
       .pick-ending-copy { font-size: .72rem; }
       .trending-row { gap: .35rem; justify-content: center; }
       .trend-chip { font-size: .66rem; padding: .28rem .68rem; }

@@ -123,7 +123,7 @@
       el.className = 'ac-item';
       el.innerHTML = `
         ${thumb
-          ? `<img class="ac-thumb" src="${esc(thumb)}" alt="" loading="lazy" />`
+          ? `<img class="ac-thumb" src="${esc(thumb)}" alt="" loading="lazy" decoding="async" />`
           : `<div class="ac-thumb" style="border-radius:6px"></div>`}
         <div class="ac-info">
           <div class="ac-name">${hlText(title, query)}</div>
@@ -193,7 +193,7 @@
     card.innerHTML = `
       <div class="bo-poster-wrap">
         ${poster
-          ? `<img class="bo-poster" src="${esc(poster)}" alt="${esc(m.title)}" loading="lazy" />`
+          ? `<img class="bo-poster" src="${esc(poster)}" alt="${esc(m.title)}" loading="lazy" decoding="async" />`
           : `<div class="bo-poster"></div>`}
         <div class="rank-num">#${rank}</div>
       </div>
@@ -821,7 +821,7 @@
       const left  = remaining(state);
       result.innerHTML = `
         <div class="pick-tagline"><span class="pick-tagline-label">오늘의 영화적 운명</span></div>
-        ${poster ? `<img class="pick-poster" src="${esc(poster)}" alt="${esc(title)}" loading="lazy" />` : ''}
+        ${poster ? `<img class="pick-poster" src="${esc(poster)}" alt="${esc(title)}" loading="lazy" decoding="async" />` : ''}
         ${credLine ? `<div class="pick-credit-line">${credLine}</div>` : ''}
         ${renderPickKeywords(kwTags)}
         ${overview ? `<div class="pick-overview">${esc(overview)}</div>` : ''}
