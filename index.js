@@ -473,7 +473,7 @@
           /* Start infinite loop motion on each letter with stagger */
           letters.forEach((l, li) => {
             l.style.animation = '';
-            l.style.animationDelay = `${(li * 0.3).toFixed(2)}s`;
+            l.style.animationDelay = `${(li * 0.4).toFixed(2)}s`;
             l.classList.add('alive');
           });
         } else {

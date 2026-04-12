@@ -59,15 +59,29 @@
     .logo-letter.lt.lit { color: var(--yellow); text-shadow: 0 0 28px rgba(250,204,21,.42); }
 
     /* -- Infinite logo motion -- */
-    .logo-letter.alive.lc { animation: neonBreathW 6s ease-in-out infinite; }
-    .logo-letter.alive.lt { animation: neonBreathY 6s ease-in-out infinite; }
-    @keyframes neonBreathW {
-      0%, 100% { text-shadow: 0 0 4px rgba(255,255,255,.08), 0 0 14px rgba(96,165,250,.04); }
-      50%      { text-shadow: 0 0 14px rgba(255,255,255,.32), 0 0 36px rgba(96,165,250,.2), 0 0 60px rgba(167,139,250,.1); }
+    /*
+     * Warm neon fill — 25s cycle, ease-in-out
+     * 0-76%  (19s)  idle: zero glow, zero GPU work
+     * 76-88% (3s)   fill: warm golden light slowly rises
+     * 88-92% (1s)   hold: peak luminance
+     * 92-100% (2s)  fade: gently returns to base
+     * JS sets per-letter stagger via inline animationDelay
+     */
+    .logo-letter.alive.lc { animation: glowW 25s ease-in-out infinite; }
+    .logo-letter.alive.lt { animation: glowY 25s ease-in-out infinite; }
+
+    @keyframes glowW {
+      0%, 76%   { color: #fff;    text-shadow: none; }
+      88%       { color: #fff8e7; text-shadow: 0 0 4px rgba(253,220,110,.45), 0 0 11px rgba(250,185,40,.14); }
+      92%       { color: #fff8e7; text-shadow: 0 0 4px rgba(253,220,110,.45), 0 0 11px rgba(250,185,40,.14); }
+      100%      { color: #fff;    text-shadow: none; }
     }
-    @keyframes neonBreathY {
-      0%, 100% { text-shadow: 0 0 6px rgba(250,204,21,.12), 0 0 16px rgba(250,204,21,.05); }
-      50%      { text-shadow: 0 0 18px rgba(250,204,21,.5), 0 0 40px rgba(250,204,21,.24), 0 0 64px rgba(255,165,0,.1); }
+
+    @keyframes glowY {
+      0%, 76%   { color: var(--yellow); text-shadow: none; }
+      88%       { color: #fde68a;       text-shadow: 0 0 4px rgba(250,204,21,.5), 0 0 11px rgba(250,160,0,.16); }
+      92%       { color: #fde68a;       text-shadow: 0 0 4px rgba(250,204,21,.5), 0 0 11px rgba(250,160,0,.16); }
+      100%      { color: var(--yellow); text-shadow: none; }
     }
     .logo-ball {
       position: absolute; width: 10px; height: 10px; border-radius: 50%;
@@ -260,11 +274,10 @@
       font-size: .5rem; letter-spacing: .22em; text-transform: uppercase;
       color: rgba(255,255,255,.26);
     }
-    .footer-pills { display:flex; flex-wrap:wrap; gap:.38rem; align-items:flex-start; padding-top:.1rem; }
+    .footer-pills { display:flex; flex-wrap:wrap; gap:.9rem; align-items:flex-start; padding-top:.1rem; }
     .f-pill {
-      font-size: .5rem; letter-spacing: .12em; text-transform: uppercase;
-      padding: .24rem .68rem; border-radius: 9999px;
-      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08); color: rgba(255,255,255,.28);
+      font-size: .5rem; letter-spacing: .14em; text-transform: uppercase;
+      color: rgba(255,255,255,.22);
     }
     .footer-copy {
       font-size: .5rem; letter-spacing: .1em; text-transform: uppercase;
@@ -539,8 +552,8 @@
       .footer-brand { align-items: center; }
       .footer-logo-row { font-size: 1.1rem; letter-spacing: .2em; }
       .footer-tagline { font-size: .44rem; letter-spacing: .18em; text-align: center; }
-      .footer-pills { justify-content: center; gap: .3rem; }
-      .f-pill { font-size: .44rem; padding: .18rem .52rem; }
+      .footer-pills { justify-content: center; gap: .75rem; }
+      .f-pill { font-size: .44rem; }
       .footer-copy { font-size: .42rem; letter-spacing: .06em; margin-top: .9rem; padding-top: .55rem; text-align: center; }
       .pick-tagline-text { font-size: .72rem; }
       .pick-action { font-size: .74rem; }

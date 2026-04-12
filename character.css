@@ -1,0 +1,96 @@
+/* ═══════ Speedster Character — fully isolated, remove this file to rollback ═══════ */
+
+/* ── Base runner element (horizontal flying pose: 64×28 aspect) ── */
+.vibe-char-runner {
+  position: fixed;
+  z-index: 9999;
+  width: 64px;
+  height: 28px;
+  pointer-events: none;
+  will-change: transform, opacity, filter;
+  opacity: 0;
+  left: 0; top: 0;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* ── Phase 1: Entrance — gentle glow ── */
+.vibe-char-runner.vibe-char-enter {
+  opacity: 1;
+  filter: drop-shadow(0 0 4px rgba(0,230,255,.4));
+  transition: opacity 0.3s ease-out;
+}
+
+/* ── Phase 2: Idle — gentle hover float ── */
+.vibe-char-runner.vibe-char-idle {
+  animation: vibe-char-float .6s ease-in-out infinite alternate;
+}
+
+@keyframes vibe-char-float {
+  0%   { margin-top: 0; }
+  100% { margin-top: -3px; }
+}
+
+/* ── Phase 3: Charge-up spark ── */
+.vibe-char-runner.vibe-char-charge {
+  animation: vibe-char-spark .3s steps(2, end) 1;
+}
+
+@keyframes vibe-char-spark {
+  0%   { filter: drop-shadow(0 0 3px rgba(0,230,255,.6)); }
+  25%  { filter: drop-shadow(0 0 10px rgba(250,204,21,.9)) drop-shadow(0 0 16px rgba(0,230,255,.6)); }
+  50%  { filter: drop-shadow(0 0 2px rgba(0,230,255,.3)); }
+  75%  { filter: drop-shadow(0 0 12px rgba(250,204,21,1)) drop-shadow(0 0 20px rgba(0,200,255,.7)); }
+  100% { filter: drop-shadow(0 0 8px rgba(250,204,21,.8)) drop-shadow(0 0 14px rgba(0,230,255,.5)); }
+}
+
+/* ── Phase 4: Dash — heavy trail glow (gold + cyan) ── */
+.vibe-char-runner.vibe-char-dash {
+  filter:
+    drop-shadow(-8px 0 10px rgba(250,204,21,.7))
+    drop-shadow(-18px 0 20px rgba(250,180,0,.3))
+    drop-shadow(-30px 0 32px rgba(0,200,255,.12));
+}
+
+/* ── After-image ghosts (dash phase only) ── */
+.vibe-char-ghost {
+  position: fixed;
+  z-index: 9998;
+  width: 64px;
+  height: 28px;
+  pointer-events: none;
+  left: 0; top: 0;
+  filter:
+    drop-shadow(-4px 0 6px rgba(250,204,21,.5))
+    brightness(1.4) saturate(1.6);
+  opacity: 0.4;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+.vibe-char-ghost.vibe-char-fade {
+  transition: opacity .25s ease-out;
+  opacity: 0;
+}
+
+/* ── Portal effect (entrance / exit) ── */
+.vibe-char-portal {
+  position: fixed;
+  z-index: 9997;
+  width: 6px;
+  height: 52px;
+  pointer-events: none;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(0,230,255,.7) 0%, rgba(0,180,255,.2) 50%, transparent 100%);
+  box-shadow: 0 0 12px rgba(0,230,255,.5), 0 0 24px rgba(0,180,255,.2);
+  opacity: 0;
+  transition: opacity .2s ease-out, transform .2s ease-out;
+}
+.vibe-char-portal.vibe-char-portal-open {
+  opacity: 1;
+  transform: scaleX(2.5);
+}
+.vibe-char-portal.vibe-char-portal-close {
+  opacity: 0;
+  transform: scaleX(0.3);
+}
