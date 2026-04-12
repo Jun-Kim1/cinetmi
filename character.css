@@ -6,6 +6,7 @@
   z-index: 9999;
   width: 64px;
   height: 28px;
+  margin: 0; padding: 0; border: 0;
   pointer-events: none;
   will-change: transform, opacity, filter;
   opacity: 0;
@@ -21,14 +22,14 @@
   transition: opacity 0.3s ease-out;
 }
 
-/* ── Phase 2: Idle — gentle hover float ── */
+/* ── Phase 2: Idle — gentle hover float (transform-only, no layout side effects) ── */
 .vibe-char-runner.vibe-char-idle {
   animation: vibe-char-float .6s ease-in-out infinite alternate;
 }
 
 @keyframes vibe-char-float {
-  0%   { margin-top: 0; }
-  100% { margin-top: -3px; }
+  0%   { transform: translate3d(var(--vibe-ix), var(--vibe-iy), 0); }
+  100% { transform: translate3d(var(--vibe-ix), calc(var(--vibe-iy) - 3px), 0); }
 }
 
 /* ── Phase 3: Charge-up spark ── */
@@ -58,6 +59,7 @@
   z-index: 9998;
   width: 64px;
   height: 28px;
+  margin: 0; padding: 0; border: 0;
   pointer-events: none;
   left: 0; top: 0;
   filter:
@@ -79,6 +81,7 @@
   z-index: 9997;
   width: 6px;
   height: 52px;
+  margin: 0; padding: 0; border: 0;
   pointer-events: none;
   border-radius: 50%;
   background: radial-gradient(ellipse, rgba(0,230,255,.7) 0%, rgba(0,180,255,.2) 50%, transparent 100%);

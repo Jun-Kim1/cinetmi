@@ -171,7 +171,10 @@
         portalIn.classList.add('vibe-char-portal-close');
         setTimeout(function () { if (portalIn.parentNode) portalIn.parentNode.removeChild(portalIn); }, 300);
 
-        /* ═══ PHASE 2: IDLE — pause + bob ═══ */
+        /* ═══ PHASE 2: IDLE — pause + float ═══ */
+        /* Store idle position as CSS custom properties for the float keyframes */
+        runner.style.setProperty('--vibe-ix', pos.idleX.toFixed(1) + 'px');
+        runner.style.setProperty('--vibe-iy', pos.idleY.toFixed(1) + 'px');
         runner.classList.add('vibe-char-idle');
 
         setTimeout(function () {
