@@ -533,6 +533,15 @@
       .pick-section { padding-top: 1.8rem; }
       .pick-poster { width: 130px; height: 195px; }
       .pick-tagline { font-size: .72rem; }
+      /* ── Footer mobile ── */
+      .footer { padding: 1.2rem 1.2rem 1.6rem; }
+      .footer-top { align-items: center; gap: .5rem; }
+      .footer-brand { align-items: center; }
+      .footer-logo-row { font-size: 1.1rem; letter-spacing: .2em; }
+      .footer-tagline { font-size: .44rem; letter-spacing: .18em; text-align: center; }
+      .footer-pills { justify-content: center; gap: .3rem; }
+      .f-pill { font-size: .44rem; padding: .18rem .52rem; }
+      .footer-copy { font-size: .42rem; letter-spacing: .06em; margin-top: .9rem; padding-top: .55rem; text-align: center; }
       .pick-tagline-text { font-size: .72rem; }
       .pick-action { font-size: .74rem; }
       .pick-quote-copy {
@@ -556,7 +565,7 @@
     }
     @supports (padding: env(safe-area-inset-bottom)) {
       body { padding-bottom: env(safe-area-inset-bottom); }
-      .footer { padding-bottom: calc(2.2rem + env(safe-area-inset-bottom)); }
+      .footer { padding-bottom: calc(1.6rem + env(safe-area-inset-bottom)); }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
