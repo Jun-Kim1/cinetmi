@@ -41,6 +41,8 @@
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       padding: 3.8rem 1.5rem 3rem; text-align: center;
       position: relative; z-index: 10; overflow: visible;
+      -webkit-transform: translateZ(0); /* own GPU layer — immune to character compositing changes */
+      transform: translateZ(0);
     }
     .clapper-wrap { margin-bottom: 1.4rem; animation: float1 5.5s ease-in-out 2s infinite; }
     .logo-main {
@@ -580,12 +582,6 @@
     @supports (padding: env(safe-area-inset-bottom)) {
       body { padding-bottom: env(safe-area-inset-bottom); }
       .footer { padding-bottom: calc(1.6rem + env(safe-area-inset-bottom)); }
-    }
-    /* iOS Safari: extra top safety for logo clipping */
-    @supports (-webkit-touch-callout: none) {
-      @media (max-width: 768px) {
-        .hero { padding-top: calc(3.2rem + env(safe-area-inset-top, 0px)) !important; }
-      }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {

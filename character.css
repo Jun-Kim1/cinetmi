@@ -4,20 +4,14 @@
 .vibe-char-stage {
   position: fixed;
   top: 0; left: 0;
-  width: 100%; height: 100%;
+  width: 0; height: 0;         /* zero footprint — no viewport recalculation in Safari */
   margin: 0; padding: 0; border: 0;
   pointer-events: none;
   z-index: 9997;
-  overflow: hidden;            /* clip character outside viewport — no scrollbars */
-  contain: strict;             /* full layout/paint/size isolation */
-  -webkit-transform: translateZ(0); /* force Safari compositing layer */
+  overflow: visible;           /* children render outside, fixed to viewport boundary */
+  -webkit-transform: translateZ(0); /* stable GPU compositing layer from page load */
   transform: translateZ(0);
-  /* Invisible by default but GPU layer is allocated at page load.
-     Toggling visibility never triggers a compositing layer rebuild. */
-  visibility: hidden;
-}
-.vibe-char-stage--active {
-  visibility: visible;
+  /* Always visible: never toggled. Runner parks off-screen at (-500,-500). */
 }
 
 /* ── Base runner element (horizontal flying pose: 64×28 aspect) ── */

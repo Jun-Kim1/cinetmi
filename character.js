@@ -168,8 +168,7 @@
     runner.style.opacity  = '';
     runner.style.transform = 'translate3d(' + pos.startX + 'px,' + pos.startY + 'px,0)';
 
-    /* Reveal the pre-existing stage (GPU layer already allocated) */
-    stage.classList.add('vibe-char-stage--active');
+    /* Stage is always in DOM and visible — no class toggle needed */
 
     /* Entrance portal */
     var portalIn = makePortal(stage, pos.portalEntryX, pos.portalY);
@@ -252,10 +251,9 @@
                 setTimeout(function () {
                   /* Remove portal; ghosts already self-remove after 300ms */
                   if (portalOut.parentNode) portalOut.parentNode.removeChild(portalOut);
-                  /* Reset runner and hide stage — do NOT remove from DOM */
+                  /* Park runner off-screen — stage stays in DOM always */
                   runner.className = 'vibe-char-runner';
                   runner.style.transform = 'translate3d(-500px,-500px,0)';
-                  stage.classList.remove('vibe-char-stage--active');
                 }, 300);
               }
             }
