@@ -41,23 +41,11 @@
       display: flex; flex-direction: column; align-items: center; justify-content: center;
       padding: 3.8rem 1.5rem 3rem; text-align: center;
       position: relative; z-index: 10; overflow: visible;
-      isolation: isolate;
-      contain: paint;
-      -webkit-backface-visibility: hidden;
-      backface-visibility: hidden;
     }
-    .clapper-wrap {
-      margin-bottom: 1.4rem; animation: float1 5.5s ease-in-out 2s infinite;
-      position: relative; z-index: 2; overflow: visible;
-      -webkit-transform: translateZ(0); transform: translateZ(0);
-      -webkit-backface-visibility: hidden; backface-visibility: hidden;
-    }
+    .clapper-wrap { margin-bottom: 1.4rem; animation: float1 5.5s ease-in-out 2s infinite; }
     .logo-main {
       display: flex; align-items: baseline; gap: 0;
       line-height: 1; margin-bottom: .6rem; position: relative;
-      z-index: 2; overflow: visible;
-      -webkit-transform: translateZ(0); transform: translateZ(0);
-      -webkit-backface-visibility: hidden; backface-visibility: hidden;
     }
     .logo-c { display: inline-flex; }
     .logo-t { display: inline-flex; perspective: 600px; }

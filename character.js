@@ -160,21 +160,6 @@
     showTimer = window.setTimeout(runShow, rand(MIN_DELAY, MAX_DELAY));
   }
 
-  function refreshHomeLayers() {
-    var hero = document.querySelector('.hero');
-    var logo = document.getElementById('logo-main');
-    [hero, logo].forEach(function (el) {
-      if (!el) return;
-      el.style.webkitTransform = 'translateZ(0)';
-      el.style.transform = 'translateZ(0)';
-      el.offsetHeight;
-      requestAnimationFrame(function () {
-        el.style.webkitTransform = '';
-        el.style.transform = '';
-      });
-    });
-  }
-
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initStage);
   } else {
@@ -323,11 +308,8 @@
 
   window.addEventListener('pageshow', function (event) {
     if (!event.persisted) return;
-    requestAnimationFrame(function () {
-      refreshHomeLayers();
-      initStage();
-      scheduleShow();
-    });
+    initStage();
+    scheduleShow();
   });
 
   /* ── Schedule — random 1s ~ 15s, once ── */
