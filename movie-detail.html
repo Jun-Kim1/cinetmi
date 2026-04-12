@@ -430,8 +430,18 @@
     }
     @media (max-width: 640px) {
       .movie-card-inner { flex-direction: column; }
-      .poster-shell { width: 100%; min-height: 220px; border-right: none; border-bottom: 1px solid rgba(255,255,255,.06); }
-      #poster { height: 220px; }
+      .poster-shell {
+        width: min(100%, 320px); min-height: 0; aspect-ratio: 2 / 3;
+        margin: 0 auto; border-right: none; border-bottom: 1px solid rgba(255,255,255,.06);
+        border-bottom-left-radius: 18px; border-bottom-right-radius: 18px;
+      }
+      #poster {
+        height: 100%; object-fit: contain; object-position: center top;
+        padding: .75rem; background:
+          radial-gradient(circle at top, rgba(37,99,235,.14), transparent 42%),
+          linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015)),
+          #0a0b16;
+      }
       .movie-title { font-size: 1.5rem; }
       .nav { padding: .78rem 1rem; }
       .wrap { padding: .9rem .9rem 2rem; }
@@ -449,8 +459,8 @@
     }
     @media (max-width: 400px) {
       .movie-title { font-size: 1.3rem; }
-      .poster-shell { min-height: 180px; }
-      #poster { height: 180px; }
+      .poster-shell { width: min(100%, 280px); }
+      #poster { padding: .6rem; }
       .wrap { padding: .7rem .7rem 1.5rem; }
       .meta-val { font-size: .8rem; }
       .overview-text { font-size: .78rem; }

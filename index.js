@@ -971,9 +971,36 @@
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   window.scrollTo(0, 0);
 
+  function refreshHeroLayers() {
+    const hero = document.querySelector('.hero');
+    const clapper = document.querySelector('.clapper-wrap');
+    const logo = document.getElementById('logo-main');
+    [hero, clapper, logo].forEach((el) => {
+      if (!el) return;
+      el.style.webkitTransform = 'translateZ(0.01px)';
+      el.style.transform = 'translateZ(0.01px)';
+      el.style.webkitMaskImage = 'linear-gradient(#000, #000)';
+      el.style.maskImage = 'linear-gradient(#000, #000)';
+      el.offsetHeight;
+    });
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        [hero, clapper, logo].forEach((el) => {
+          if (!el) return;
+          el.style.webkitTransform = '';
+          el.style.transform = '';
+          el.style.webkitMaskImage = '';
+          el.style.maskImage = '';
+        });
+      });
+    });
+  }
+
   window.addEventListener('pageshow', (event) => {
     if (!event.persisted) return;
     loadBox({ resetScroll: true });
+    window.scrollTo(0, 0);
+    refreshHeroLayers();
   });
 
   /* ─── Init ─── */

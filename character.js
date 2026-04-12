@@ -108,10 +108,14 @@
      recalculation which clips elements near the top. ── */
   var stage  = null;
   var runner = null;
+  var showTimer = 0;
+  var isRunning = false;
 
   function initStage() {
+    if (stage && stage.parentNode) return;
+
     stage = document.createElement('div');
-    stage.className = 'vibe-char-stage'; /* visibility:hidden via CSS default */
+    stage.className = 'vibe-char-stage';
     document.body.appendChild(stage);
 
     runner = document.createElement('img');
@@ -124,6 +128,51 @@
     /* Park far off-screen — must not be at (0,0) or it flickers on load */
     runner.style.transform = 'translate3d(-500px,-500px,0)';
     stage.appendChild(runner);
+  }
+
+  function clearStageChildren() {
+    if (!stage) return;
+    var leftovers = stage.querySelectorAll('.vibe-char-portal, .vibe-char-ghost');
+    leftovers.forEach(function (node) {
+      if (node.parentNode) node.parentNode.removeChild(node);
+    });
+  }
+
+  function parkRunner() {
+    if (!runner) return;
+    runner.className = 'vibe-char-runner';
+    runner.style.opacity = '0';
+    runner.style.transform = 'translate3d(-500px,-500px,0)';
+  }
+
+  function destroyStage() {
+    isRunning = false;
+    clearTimeout(showTimer);
+    clearStageChildren();
+    parkRunner();
+    if (stage && stage.parentNode) stage.parentNode.removeChild(stage);
+    stage = null;
+    runner = null;
+  }
+
+  function scheduleShow() {
+    clearTimeout(showTimer);
+    showTimer = window.setTimeout(runShow, rand(MIN_DELAY, MAX_DELAY));
+  }
+
+  function refreshHomeLayers() {
+    var hero = document.querySelector('.hero');
+    var logo = document.getElementById('logo-main');
+    [hero, logo].forEach(function (el) {
+      if (!el) return;
+      el.style.webkitTransform = 'translateZ(0)';
+      el.style.transform = 'translateZ(0)';
+      el.offsetHeight;
+      requestAnimationFrame(function () {
+        el.style.webkitTransform = '';
+        el.style.transform = '';
+      });
+    });
   }
 
   if (document.readyState === 'loading') {
@@ -159,7 +208,8 @@
 
   /* ── Main show ── */
   function runShow() {
-    if (!stage || !runner) return; /* initStage not yet called — skip */
+    if (!stage || !runner || isRunning) return;
+    isRunning = true;
 
     var pos = getPositions();
 
@@ -252,8 +302,9 @@
                   /* Remove portal; ghosts already self-remove after 300ms */
                   if (portalOut.parentNode) portalOut.parentNode.removeChild(portalOut);
                   /* Park runner off-screen — stage stays in DOM always */
-                  runner.className = 'vibe-char-runner';
-                  runner.style.transform = 'translate3d(-500px,-500px,0)';
+                  clearStageChildren();
+                  parkRunner();
+                  isRunning = false;
                 }, 300);
               }
             }
@@ -266,7 +317,19 @@
     requestAnimationFrame(enterFrame);
   }
 
-  /* ── Schedule — random 1s ~ 60s, once ── */
-  var delay = rand(MIN_DELAY, MAX_DELAY);
-  setTimeout(runShow, delay);
+  window.addEventListener('pagehide', function () {
+    destroyStage();
+  });
+
+  window.addEventListener('pageshow', function (event) {
+    if (!event.persisted) return;
+    requestAnimationFrame(function () {
+      refreshHomeLayers();
+      initStage();
+      scheduleShow();
+    });
+  });
+
+  /* ── Schedule — random 1s ~ 15s, once ── */
+  scheduleShow();
 })();
