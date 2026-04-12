@@ -23,6 +23,8 @@
   left: 0; top: 0;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
+  -webkit-filter: drop-shadow(0 0 0 transparent);
+  filter: drop-shadow(0 0 0 transparent);
 }
 
 /* ── Phase 1: Entrance — gentle glow ── */
