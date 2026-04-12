@@ -100,7 +100,7 @@
     const qClean = query.replace(/\s/g, '');
     if (!qClean) return esc(text);
     const pattern = qClean.split('')
-      .map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .map(c => c.replace(/[.*+?^${}()|\\[\]\\\\]/g, '\\$&'))
       .join('\\s*');
     const re = new RegExp('(' + pattern + ')', 'i');
     const m  = text.match(re);

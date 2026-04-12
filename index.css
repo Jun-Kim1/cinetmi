@@ -541,8 +541,9 @@
       text-shadow: 0 0 8px rgba(253,230,138,.48), 0 0 22px rgba(253,230,138,.2);
     }
       .pick-ending-copy { font-size: .72rem; }
-      .trending-row { gap: .35rem; }
+      .trending-row { gap: .35rem; justify-content: center; }
       .trend-chip { font-size: .66rem; padding: .28rem .68rem; }
+      #trend-chips { justify-content: center !important; }
     }
     @media (max-width:400px) {
       .logo-letter { font-size: 2.8rem; }
@@ -550,6 +551,8 @@
       .search-input { font-size: max(.82rem, 16px); padding: .8rem 4rem .8rem 1rem; }
       .section-head { flex-direction: column; gap: .3rem; }
       .ticker-strip { display: none; }
+      .trending-row { gap: .3rem; margin-top: .75rem; }
+      .trend-chip { font-size: .62rem; padding: .24rem .58rem; }
     }
     @supports (padding: env(safe-area-inset-bottom)) {
       body { padding-bottom: env(safe-area-inset-bottom); }
