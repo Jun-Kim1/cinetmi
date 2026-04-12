@@ -103,17 +103,17 @@
   }
 
   /* ── Create portal element ── */
-  function makePortal(x, y) {
+  function makePortal(stage, x, y) {
     var p = document.createElement('div');
     p.className = 'vibe-char-portal';
     p.style.left = x + 'px';
     p.style.top = y + 'px';
-    document.body.appendChild(p);
+    stage.appendChild(p);
     return p;
   }
 
   /* ── Spawn a ghost at position ── */
-  function spawnGhost(x, y) {
+  function spawnGhost(stage, x, y) {
     var g = document.createElement('img');
     g.src = RUNNER_SRC;
     g.className = 'vibe-char-ghost';
@@ -122,7 +122,7 @@
     g.height = SIZE_H;
     g.draggable = false;
     g.style.transform = 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)';
-    document.body.appendChild(g);
+    stage.appendChild(g);
     requestAnimationFrame(function () { g.classList.add('vibe-char-fade'); });
     setTimeout(function () { if (g.parentNode) g.parentNode.removeChild(g); }, 300);
   }
@@ -130,6 +130,11 @@
   /* ── Main show ── */
   function runShow() {
     var pos = getPositions();
+
+    /* Create isolated containment stage */
+    var stage = document.createElement('div');
+    stage.className = 'vibe-char-stage';
+    document.body.appendChild(stage);
 
     /* Create runner */
     var runner = document.createElement('img');
@@ -140,10 +145,10 @@
     runner.height = SIZE_H;
     runner.draggable = false;
     runner.style.transform = 'translate3d(' + pos.startX + 'px,' + pos.startY + 'px,0)';
-    document.body.appendChild(runner);
+    stage.appendChild(runner);
 
     /* Entrance portal */
-    var portalIn = makePortal(pos.portalEntryX, pos.portalY);
+    var portalIn = makePortal(stage, pos.portalEntryX, pos.portalY);
 
     /* Force reflow */
     runner.offsetHeight;
@@ -190,7 +195,7 @@
             runner.classList.add('vibe-char-dash');
 
             /* Exit portal */
-            var portalOut = makePortal(pos.portalExitX, pos.portalY);
+            var portalOut = makePortal(stage, pos.portalExitX, pos.portalY);
             portalOut.classList.add('vibe-char-portal-open');
 
             var dashStart = performance.now();
@@ -200,7 +205,7 @@
               var r = Math.min(dt / DASH_MS, 1);
               var gx = pos.idleX + (pos.exitX - pos.idleX) * easeIn(r);
               var gy = pos.idleY + (pos.exitY - pos.idleY) * r;
-              spawnGhost(gx, gy);
+              spawnGhost(stage, gx, gy);
             }, GHOST_INTERVAL);
 
             function dashFrame(ts) {
@@ -221,8 +226,8 @@
                 portalOut.classList.remove('vibe-char-portal-open');
                 portalOut.classList.add('vibe-char-portal-close');
                 setTimeout(function () {
-                  if (runner.parentNode) runner.parentNode.removeChild(runner);
-                  if (portalOut.parentNode) portalOut.parentNode.removeChild(portalOut);
+                  /* Remove entire stage — all children go with it */
+                  if (stage.parentNode) stage.parentNode.removeChild(stage);
                 }, 300);
               }
             }

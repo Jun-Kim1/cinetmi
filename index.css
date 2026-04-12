@@ -581,6 +581,12 @@
       body { padding-bottom: env(safe-area-inset-bottom); }
       .footer { padding-bottom: calc(1.6rem + env(safe-area-inset-bottom)); }
     }
+    /* iOS Safari: extra top safety for logo clipping */
+    @supports (-webkit-touch-callout: none) {
+      @media (max-width: 768px) {
+        .hero { padding-top: calc(3.2rem + env(safe-area-inset-top, 0px)) !important; }
+      }
+    }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: 0.01ms !important;
