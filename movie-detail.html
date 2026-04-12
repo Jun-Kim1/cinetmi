@@ -254,7 +254,7 @@
       width: 100%; max-height: 260px; object-fit: cover;
       border-radius: 10px; border: 1px solid rgba(255,255,255,.06);
     }
-    .tmi-foot { display: flex; justify-content: flex-end; }
+    .tmi-foot { display: flex; justify-content: flex-end; align-items: center; gap: .5rem; }
     .tmi-action-btn {
       font-size: .66rem; letter-spacing: .1em; color: rgba(255,255,255,.22); background: transparent; border: 0;
       cursor: pointer; display: inline-flex; align-items: center; gap: .3rem;
@@ -440,7 +440,11 @@
       .modal { padding: 1.4rem; border-radius: 16px; max-width: 100%; }
       .tmi-body { font-size: .82rem; }
       .tmi-img { max-height: 200px; }
-      .tmi-action-btn { padding: .35rem .65rem; }
+      .tmi-action-btn { padding: .35rem .65rem; flex-shrink: 0; }
+      .tmi-foot { flex-wrap: nowrap; }
+      .del-row { flex-wrap: nowrap; }
+      .del-pass-inp { min-width: 0; letter-spacing: .14em; }
+      .del-confirm-btn, .edit-confirm-btn { flex-shrink: 0; }
       .upload-area { min-height: 72px; }
     }
     @media (max-width: 400px) {

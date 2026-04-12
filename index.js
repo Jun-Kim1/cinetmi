@@ -1,4 +1,4 @@
-﻿﻿/* ─── Config ─── */
+﻿/* ─── Config ─── */
   const TMDB_KEY  = 'f8a2a8ea141ae946e983a431a79b0c9b';
   const TMDB_BASE = 'https://api.themoviedb.org/3';
   const IMG_BASE  = 'https://image.tmdb.org/t/p/';
@@ -60,14 +60,57 @@
 
   async function fetchMulti(q) {
     if (!q) return;
+    const qNorm = q.replace(/\s+/g, ' ').trim();
+    const qNoSp = qNorm.replace(/\s/g, '');
     try {
-      const data = await tfetch('/search/multi?api_key=' + TMDB_KEY + '&language=ko-KR&query=' + encodeURIComponent(q));
-      const list = (data.results || []).filter(r => r.media_type === 'movie' || r.media_type === 'tv').slice(0, 8);
-      renderAc(list);
+      const searches = [
+        tfetch('/search/multi?api_key=' + TMDB_KEY + '&language=ko-KR&query=' + encodeURIComponent(qNorm))
+      ];
+      if (qNorm.includes(' ')) {
+        /* 띄어쓰기 포함 입력 → 공백 제거 버전도 검색 */
+        searches.push(tfetch('/search/multi?api_key=' + TMDB_KEY + '&language=ko-KR&query=' + encodeURIComponent(qNoSp)));
+      } else if (qNoSp.length >= 3) {
+        /* 띄어쓰기 없이 입력 → 앞 2글자로 넓은 후보군 확보 */
+        const prefix = qNoSp.slice(0, 2);
+        searches.push(tfetch('/search/multi?api_key=' + TMDB_KEY + '&language=ko-KR&query=' + encodeURIComponent(prefix)));
+      }
+      const datasets = await Promise.all(searches);
+      const seen = new Set();
+      const all = [];
+      for (const data of datasets) {
+        for (const r of (data.results || [])) {
+          if ((r.media_type === 'movie' || r.media_type === 'tv') && !seen.has(r.id)) {
+            seen.add(r.id);
+            all.push(r);
+          }
+        }
+      }
+      /* 공백 제거 후 .includes() 부분 일치 필터링 */
+      const qLow = qNoSp.toLowerCase();
+      const matched = all.filter(r =>
+        (r.title || r.name || '').replace(/\s/g, '').toLowerCase().includes(qLow)
+      );
+      renderAc((matched.length ? matched : all).slice(0, 8), qNorm);
     } catch(e) { console.warn('search error', e); }
   }
 
-  function renderAc(list) {
+  /* ─── Highlight matching query in text ─── */
+  function hlText(text, query) {
+    if (!query || !text) return esc(text);
+    const qClean = query.replace(/\s/g, '');
+    if (!qClean) return esc(text);
+    const pattern = qClean.split('')
+      .map(c => c.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .join('\\s*');
+    const re = new RegExp('(' + pattern + ')', 'i');
+    const m  = text.match(re);
+    if (!m) return esc(text);
+    return esc(text.slice(0, m.index))
+      + '<span class="ac-hl">' + esc(m[0]) + '</span>'
+      + esc(text.slice(m.index + m[0].length));
+  }
+
+  function renderAc(list, query) {
     if (!list.length) { hideAc(); return; }
     acDrop.innerHTML = '';
     list.forEach((r, i) => {
@@ -83,7 +126,7 @@
           ? `<img class="ac-thumb" src="${esc(thumb)}" alt="" loading="lazy" />`
           : `<div class="ac-thumb" style="border-radius:6px"></div>`}
         <div class="ac-info">
-          <div class="ac-name">${esc(title)}</div>
+          <div class="ac-name">${hlText(title, query)}</div>
           <div class="ac-meta">${esc(year) || '연도 미상'}</div>
         </div>
         <span class="ac-badge ${isTV ? 'ac-tv' : 'ac-movie'}">${isTV ? '📺 TV' : '🎬 MOVIE'}</span>
