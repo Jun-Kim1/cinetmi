@@ -34,11 +34,27 @@
     const ctrl = new AbortController();
     const t    = setTimeout(() => ctrl.abort(), 8000);
     try {
-      const r = await fetch(TMDB_BASE + path, { signal: ctrl.signal });
+      const r = await fetch(TMDB_BASE + path, {
+        signal: ctrl.signal,
+        cache: 'no-store',
+      });
       clearTimeout(t);
       if (!r.ok) throw new Error('HTTP ' + r.status);
       return r.json();
     } catch(e) { clearTimeout(t); throw e; }
+  }
+
+  function wait(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function fetchNowPlayingWithFallback() {
+    try {
+      return await tfetch('/movie/now_playing?language=ko-KR&region=KR');
+    } catch (err) {
+      console.warn('[CineTMI] now_playing failed, fallback to trending/movie/day:', err);
+      return tfetch('/trending/movie/day?language=ko-KR');
+    }
   }
 
   /* ─── Autocomplete ─── */
@@ -241,11 +257,11 @@
   }
 
   /* ─── Load box office ─── */
-  async function loadBox({ resetScroll = false } = {}) {
+  async function loadBox({ resetScroll = false, retryLeft = 1 } = {}) {
     const loadToken = ++boxLoadToken;
     prepareBoxOfficeRender(resetScroll);
     try {
-      const data = await tfetch('/movie/now_playing?language=ko-KR&region=KR');
+      const data = await fetchNowPlayingWithFallback();
       if (loadToken !== boxLoadToken) return;
       const list = (data.results || []).slice(0, 10);
       const fragment = document.createDocumentFragment();
@@ -254,6 +270,14 @@
       commitBoxOfficeRender(resetScroll);
     } catch(e) {
       if (loadToken !== boxLoadToken) return;
+      console.error('[CineTMI] chart load failed:', e);
+
+      if (retryLeft > 0) {
+        await wait(1800);
+        if (loadToken !== boxLoadToken) return;
+        return loadBox({ resetScroll, retryLeft: retryLeft - 1 });
+      }
+
       if (resetScroll) resetBoxOfficeScroll();
       boTrack.style.transition = 'none';
       boTrack.style.opacity = '1';

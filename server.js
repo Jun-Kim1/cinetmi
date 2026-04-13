@@ -81,6 +81,10 @@ app.get('/api/tmdb/*', async (req, res) => {
     res.json(data);
   } catch (err) {
     if (err.response) {
+      console.warn('[CineTMI] TMDB error', {
+        path: tmdbPath,
+        status: err.response.status,
+      });
       /* Forward TMDB's own status code and body */
       return res.status(err.response.status).json(err.response.data);
     }
