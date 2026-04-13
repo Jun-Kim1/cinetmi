@@ -18,14 +18,19 @@ if (!TMDB_KEY) {
 
 /* ── CORS ──
  * Reads comma-separated origins from ALLOWED_ORIGINS env var.
- * If unset, the frontend is assumed to be served from this same server
- * (same-origin) so CORS middleware is not applied.
+ * If unset, allow read-only cross-origin GET calls (safe for public proxy endpoints).
  * Example (Render env):  ALLOWED_ORIGINS=https://your-app.onrender.com
  */
 if (process.env.ALLOWED_ORIGINS) {
   const origins = process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean);
   app.use(cors({
     origin: origins,
+    methods: ['GET'],
+    optionsSuccessStatus: 200,
+  }));
+} else {
+  app.use(cors({
+    origin: true,
     methods: ['GET'],
     optionsSuccessStatus: 200,
   }));

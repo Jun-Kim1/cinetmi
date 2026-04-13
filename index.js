@@ -1,6 +1,8 @@
 ﻿/* ─── Config ─── */
   /* TMDB calls go through the server-side proxy — API key never reaches the browser */
-  const TMDB_BASE = '/api/tmdb';
+  const API_BASE_RAW = window.CT_API_BASE || 'https://cinetmi.onrender.com';
+  const API_BASE = API_BASE_RAW.replace(/\/+$/, '');
+  const TMDB_BASE = API_BASE + '/api/tmdb';
   const IMG_BASE  = 'https://image.tmdb.org/t/p/';
 
   /* ─── DOM ─── */

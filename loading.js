@@ -8,7 +8,9 @@
   if (window.CT_SKIP_WAKEUP === true) return;
 
   /* ── Configuration ── */
-  var HEALTH_URL      = '/api/health';
+  var API_BASE_RAW    = window.CT_API_BASE || 'https://cinetmi.onrender.com';
+  var API_BASE        = API_BASE_RAW.replace(/\/+$/, '');
+  var HEALTH_URL      = API_BASE + '/api/health';
   var WAKE_DETECT_MS  = 1500;  /* no response by this time => likely sleeping */
   var PROBE_INTERVAL  = 5000;  /* ms between retry checks while overlay is visible */
   var PROBE_TIMEOUT   = 3000;  /* ms timeout per retry request */
