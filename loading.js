@@ -9,8 +9,9 @@
 
   /* ── Configuration ── */
   var HEALTH_URL      = '/api/health';
-  var GRACE_MS        = 1500;   /* ms — if no health response by this point → server sleeping  */
   var LIMIT_SECS      = 90;     /* countdown seconds; expiry → switch to usage-limit screen   */
+  var PROBE_INTERVAL  = 5000;   /* ms between health checks during countdown */
+  var PROBE_TIMEOUT   = 3000;   /* ms per health check request timeout */
   var TRIVIA_INTERVAL = 7000;   /* ms between trivia rotations */
 
   /* ── Movie trivia list ── */
@@ -105,10 +106,10 @@
   var triviaEl       = null;
   var triviaIndex    = 0;
   var secondsLeft    = LIMIT_SECS;
-  var abortCtrl      = null;
+  var countdownDeadlineAt = 0;
+  var healthCheckInFlight = false;
 
   /* Timers — all tracked so cleanupTimers() can clear every one */
-  var gracePeriodTimer = null;
   var countdownTimer   = null;
   var triviaTimer      = null;
   var triviaFadeTimer  = null;   /* inner setTimeout within rotateTriviaWithFade */
@@ -117,12 +118,12 @@
 
   /* ── Clear all timers ── */
   function cleanupTimers() {
-    clearTimeout(gracePeriodTimer);
     clearTimeout(triviaFadeTimer);
     clearTimeout(swapTimer);
     clearInterval(countdownTimer);
     clearInterval(triviaTimer);
     clearInterval(pollTimer);
+    healthCheckInFlight = false;
   }
 
   /* ── Build countdown panel HTML ── */
@@ -140,7 +141,7 @@
           '<span class="ct-number" id="ct-number">' + LIMIT_SECS + '</span>',
         '</div>',
       '</div>',
-      '<p class="ct-status">서버를 깨우는 중 · WAKING UP SERVER</p>',
+      '<p class="ct-status">영사기를 점검하고 필름을 정렬하고 있습니다. 잠시 후 상영이 시작됩니다.</p>',
       '<div class="ct-trivia-wrap">',
         '<span class="ct-trivia-label">기다리는 동안 영화 TMI</span>',
         '<p class="ct-trivia-text" id="ct-trivia"></p>',
@@ -158,17 +159,17 @@
           '<span class="ct-the-end-line"></span>',
         '</div>',
         '<div class="ct-end-char">' + PROJECTOR_SVG + '</div>',
-        '<p class="ct-end-title">이달의 필름이 소진되었습니다</p>',
-        '<p class="ct-end-sub">CineTMI는 Render 무료 서버로 운영됩니다.<br>이번 달 사용량 한도에 도달했어요. 😴</p>',
+        '<p class="ct-end-title">심야 상영 종료</p>',
+        '<p class="ct-end-sub">현재 영사기 정비 시간입니다.<br>다음 상영 시간에 다시 방문해 주세요.</p>',
         '<div class="ct-credits-outer">',
           '<div class="ct-credits-track">',
             '<p class="ct-credit-head">A CineTMI Production</p>',
             '<p class="ct-credit-dim">· · ·</p>',
-            '<p>서버 제공&emsp;<span class="ct-credit-val">Render.com FREE TIER</span></p>',
-            '<p>영화 데이터&emsp;<span class="ct-credit-val">TMDB API v3</span></p>',
-            '<p>지식 베이스&emsp;<span class="ct-credit-val">Supabase</span></p>',
+            '<p>상영관 안내&emsp;<span class="ct-credit-val">심야 점검 중</span></p>',
+            '<p>필름 보관실&emsp;<span class="ct-credit-val">정리 작업 진행</span></p>',
+            '<p>프로젝션 룸&emsp;<span class="ct-credit-val">장비 점검 중</span></p>',
             '<p class="ct-credit-dim">· · ·</p>',
-            '<p>다음 개봉일&emsp;<span class="ct-credit-val">매월 1일</span></p>',
+            '<p>다음 상영 안내&emsp;<span class="ct-credit-val">곧 다시 오픈</span></p>',
             '<p class="ct-credit-dim">· · ·</p>',
             '<p class="ct-credit-head">관람해 주셔서 감사합니다 🎬</p>',
           '</div>',
@@ -233,11 +234,38 @@
     }, 520);
   }
 
+  /* ── Health probe: succeeds only on 2xx, all errors are retried until timeout ── */
+  function performHealthCheck() {
+    if (dismissed || state !== 'COUNTDOWN' || healthCheckInFlight) return;
+    healthCheckInFlight = true;
+
+    var reqCtrl = window.AbortController ? new AbortController() : null;
+    var reqSignal = reqCtrl ? reqCtrl.signal : undefined;
+    var reqTimeout = setTimeout(function () {
+      if (reqCtrl) reqCtrl.abort();
+    }, PROBE_TIMEOUT);
+
+    fetch(HEALTH_URL, { method: 'GET', cache: 'no-store', signal: reqSignal })
+      .then(function (res) {
+        if (res.ok) dismiss();
+      })
+      .catch(function () {
+        /* keep waiting until countdown expires */
+      })
+      .finally(function () {
+        clearTimeout(reqTimeout);
+        healthCheckInFlight = false;
+      });
+  }
+
   /* ════════════════════════════════════════════════
    *  CASE B — Show countdown (server is sleeping)
    * ════════════════════════════════════════════════ */
   function showCountdown() {
+    if (state === 'COUNTDOWN' || state === 'DONE' || state === 'ENDED') return;
     state = 'COUNTDOWN';
+    secondsLeft = LIMIT_SECS;
+    countdownDeadlineAt = Date.now() + LIMIT_SECS * 1000;
     initOverlay();
     swapContent(buildCountdownContent(), function () {
       numberEl = contentEl.querySelector('#ct-number');
@@ -250,21 +278,20 @@
 
       /* Tick every second; switch to ended when limit reached */
       countdownTimer = setInterval(function () {
-        secondsLeft--;
+        secondsLeft = Math.max(0, Math.ceil((countdownDeadlineAt - Date.now()) / 1000));
         updateCountdownDisplay();
-        if (secondsLeft <= 0) { clearInterval(countdownTimer); switchToEnded(); }
+        if (secondsLeft <= 0) {
+          clearInterval(countdownTimer);
+          switchToEnded();
+        }
       }, 1000);
 
       /* Trivia rotation */
       triviaTimer = setInterval(rotateTriviaWithFade, TRIVIA_INTERVAL);
 
-      /* Poll every 5 s — dismiss the moment the server answers */
-      pollTimer = setInterval(function () {
-        if (dismissed) { clearInterval(pollTimer); return; }
-        fetch(HEALTH_URL, { method: 'GET', cache: 'no-store' })
-          .then(function (r) { if (r.ok) { clearInterval(pollTimer); dismiss(); } })
-          .catch(function () { /* still sleeping */ });
-      }, 5000);
+      /* Always show countdown first; keep probing in the background */
+      performHealthCheck();
+      pollTimer = setInterval(performHealthCheck, PROBE_INTERVAL);
     });
   }
 
@@ -286,7 +313,6 @@
     if (state === 'ENDED' || state === 'DONE') return;
     state = 'ENDED';
     cleanupTimers();
-    if (abortCtrl) abortCtrl.abort();
     var sb = document.getElementById('ct-standby');
     if (sb) sb.style.display = 'none';
     swapContent(buildEndedContent(), attachRetryBtn);
@@ -298,7 +324,6 @@
     dismissed = true;
     state = 'DONE';
     cleanupTimers();
-    if (abortCtrl) abortCtrl.abort();
     if (!overlayEl) return;
     overlayEl.style.opacity       = '0';
     overlayEl.style.pointerEvents = 'none';
@@ -312,35 +337,7 @@
 
   /* ── Main health probe ── */
   function probe() {
-    abortCtrl  = window.AbortController ? new AbortController() : null;
-    var signal = abortCtrl ? abortCtrl.signal : undefined;
-    var graceFired = false;
-
-    /* If no response within GRACE_MS → server is sleeping → Case B */
-    gracePeriodTimer = setTimeout(function () {
-      graceFired = true;
-      showCountdown();
-    }, GRACE_MS);
-
-    fetch(HEALTH_URL, { method: 'GET', cache: 'no-store', signal: signal })
-      .then(function (res) {
-        clearTimeout(gracePeriodTimer);
-        if (dismissed) return;
-        if (res.ok) {
-          /* ✅ Healthy — cancel/dismiss any overlay */
-          dismiss();
-        } else {
-          /* ❌ 4xx / 5xx: usage limit or hard server error */
-          graceFired ? switchToEnded() : showEnded();
-        }
-      })
-      .catch(function (err) {
-        if (err && err.name === 'AbortError') return; /* intentional — ignore */
-        clearTimeout(gracePeriodTimer);
-        if (dismissed) return;
-        /* ❌ "Failed to fetch": no internet or server hard-down */
-        graceFired ? switchToEnded() : showEnded();
-      });
+    showCountdown();
   }
 
   /* ── Boot ── */
