@@ -16,25 +16,34 @@ if (!TMDB_KEY) {
   process.exit(1);
 }
 
-/* ── CORS ──
- * Reads comma-separated origins from ALLOWED_ORIGINS env var.
- * If unset, allow read-only cross-origin GET calls (safe for public proxy endpoints).
- * Example (Render env):  ALLOWED_ORIGINS=https://your-app.onrender.com
+/* ── CORS (must be before all routes) ──
+ * ALLOWED_ORIGINS behavior:
+ * - '*'                      => allow all origins
+ * - 'https://a.com,https://b.com' => allow listed origins
+ * - unset                    => default allow GitHub Pages origin
  */
-if (process.env.ALLOWED_ORIGINS) {
-  const origins = process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean);
-  app.use(cors({
-    origin: origins,
-    methods: ['GET'],
-    optionsSuccessStatus: 200,
-  }));
-} else {
-  app.use(cors({
-    origin: true,
-    methods: ['GET'],
-    optionsSuccessStatus: 200,
-  }));
-}
+const defaultOrigins = ['https://jun-kim1.github.io'];
+const envOriginsRaw = process.env.ALLOWED_ORIGINS;
+const envOrigins = envOriginsRaw
+  ? envOriginsRaw.split(',').map(s => s.trim()).filter(Boolean)
+  : defaultOrigins;
+const allowAllOrigins = envOrigins.includes('*');
+
+const corsOptions = {
+  origin(origin, cb) {
+    /* Allow non-browser requests (curl, server-to-server) */
+    if (!origin) return cb(null, true);
+    if (allowAllOrigins) return cb(null, true);
+    if (envOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error('Not allowed by CORS'));
+  },
+  methods: ['GET', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 /* ── Security headers ── */
 app.use((req, res, next) => {
