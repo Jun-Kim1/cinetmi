@@ -1,6 +1,6 @@
 /* ═══════ CineTMI — Cold-Start Wake-Up Overlay ═══════
  * Self-contained IIFE. No globals are mutated.
- * Kill switch: set  window.CT_SKIP_WAKEUP = true  before this script loads.
+ * Kill switch: set window.CT_SKIP_WAKEUP = true before this script loads.
  */
 (function () {
   'use strict';
@@ -9,10 +9,10 @@
 
   /* ── Configuration ── */
   var HEALTH_URL      = '/api/health';
-  var LIMIT_SECS      = 90;     /* countdown seconds; expiry → switch to usage-limit screen   */
-  var PROBE_INTERVAL  = 5000;   /* ms between health checks during countdown */
-  var PROBE_TIMEOUT   = 3000;   /* ms per health check request timeout */
-  var TRIVIA_INTERVAL = 7000;   /* ms between trivia rotations */
+  var WAKE_DETECT_MS  = 1500;  /* no response by this time => likely sleeping */
+  var PROBE_INTERVAL  = 5000;  /* ms between retry checks while overlay is visible */
+  var PROBE_TIMEOUT   = 3000;  /* ms timeout per retry request */
+  var TRIVIA_INTERVAL = 7000;  /* ms between trivia rotations */
 
   /* ── Movie trivia list ── */
   var movieTrivia = [
@@ -45,9 +45,7 @@
   /* ── Inline SVG: sleeping film-projector character ── */
   var PROJECTOR_SVG = (
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 115" width="150" height="115" aria-hidden="true">' +
-    /* Ground shadow */
     '<ellipse cx="74" cy="110" rx="44" ry="5" fill="rgba(0,0,0,.3)"/>' +
-    /* Film reel on top (with zzz face) */
     '<g transform="translate(46,22)">' +
       '<circle r="20" fill="#161616" stroke="#2c2c2c" stroke-width="1.5"/>' +
       '<line x1="-20" y1="0" x2="20" y2="0" stroke="#222" stroke-width="2.5"/>' +
@@ -57,129 +55,72 @@
       '<circle r="5" fill="#1d1d1d" stroke="#333"/>' +
       '<text text-anchor="middle" y="4" font-size="6" fill="rgba(232,224,208,.4)" font-family="Georgia,serif" font-style="italic">zzz</text>' +
     '</g>' +
-    /* Main body */
     '<rect x="14" y="38" width="92" height="56" rx="9" fill="#171717" stroke="#252525" stroke-width="1.5"/>' +
-    /* Vent slots */
     '<rect x="24" y="42" width="3" height="9" rx="1.5" fill="#111"/>' +
     '<rect x="31" y="42" width="3" height="9" rx="1.5" fill="#111"/>' +
     '<rect x="38" y="42" width="3" height="9" rx="1.5" fill="#111"/>' +
-    /* Lens housing */
     '<rect x="100" y="48" width="26" height="34" rx="7" fill="#121212" stroke="#222" stroke-width="1.5"/>' +
-    /* Lens rings */
     '<circle cx="113" cy="65" r="12" fill="#0e0e0e" stroke="#222" stroke-width="1.2"/>' +
-    '<circle cx="113" cy="65" r="8"  fill="#090909" stroke="#1a1a1a"/>' +
+    '<circle cx="113" cy="65" r="8" fill="#090909" stroke="#1a1a1a"/>' +
     '<circle cx="113" cy="65" r="4.5" fill="#050505"/>' +
-    '<circle cx="110" cy="62" r="2"  fill="rgba(232,224,208,.07)"/>' +
-    /* Film slot */
+    '<circle cx="110" cy="62" r="2" fill="rgba(232,224,208,.07)"/>' +
     '<rect x="26" y="70" width="46" height="5.5" rx="2.5" fill="#101010" stroke="#1e1e1e"/>' +
     '<text x="49" y="74.5" text-anchor="middle" font-size="3.5" fill="rgba(232,224,208,.18)" font-family="monospace" letter-spacing="0.8">EMPTY</text>' +
-    /* Power button (red = off) */
-    '<circle cx="26" cy="85" r="5"   fill="#200e0e" stroke="#2e1414"/>' +
+    '<circle cx="26" cy="85" r="5" fill="#200e0e" stroke="#2e1414"/>' +
     '<circle cx="26" cy="85" r="2.8" fill="#7a1111"/>' +
-    /* Legs */
     '<rect x="22" y="92" width="17" height="11" rx="3" fill="#131313" stroke="#1e1e1e"/>' +
     '<rect x="66" y="92" width="17" height="11" rx="3" fill="#131313" stroke="#1e1e1e"/>' +
-    /* Rubber feet */
     '<circle cx="25" cy="102" r="2.2" fill="#0d0d0d"/>' +
     '<circle cx="36" cy="102" r="2.2" fill="#0d0d0d"/>' +
     '<circle cx="69" cy="102" r="2.2" fill="#0d0d0d"/>' +
     '<circle cx="80" cy="102" r="2.2" fill="#0d0d0d"/>' +
-    /* Floating ZZZ */
     '<text x="128" y="48" font-size="13" fill="rgba(232,224,208,.55)" font-family="Georgia,serif" font-style="italic">Z</text>' +
     '<text x="137" y="36" font-size="10" fill="rgba(232,224,208,.32)" font-family="Georgia,serif" font-style="italic">z</text>' +
-    '<text x="144" y="26" font-size="7"  fill="rgba(232,224,208,.18)" font-family="Georgia,serif" font-style="italic">z</text>' +
+    '<text x="144" y="26" font-size="7" fill="rgba(232,224,208,.18)" font-family="Georgia,serif" font-style="italic">z</text>' +
     '</svg>'
   );
 
-  /* ── State machine ──
-   *  INIT      → probe fires, no overlay shown
-   *  COUNTDOWN → Case B: server sleeping, countdown + trivia visible
-   *  ENDED     → Case A: usage limit / hard error, closing-credits screen
-   *  DONE      → dismissed (200 OK received)
-   */
-  var state          = 'INIT';
-  var dismissed      = false;
-  var overlayEl      = null;
-  var contentEl      = null;
-  var numberEl       = null;
-  var ringEl         = null;
-  var triviaEl       = null;
-  var triviaIndex    = 0;
-  var secondsLeft    = LIMIT_SECS;
-  var countdownDeadlineAt = 0;
+  var state = 'INIT';
+  var dismissed = false;
+  var loadingStarted = false;
   var healthCheckInFlight = false;
 
-  /* Timers — all tracked so cleanupTimers() can clear every one */
-  var countdownTimer   = null;
-  var triviaTimer      = null;
-  var triviaFadeTimer  = null;   /* inner setTimeout within rotateTriviaWithFade */
-  var swapTimer        = null;   /* inner setTimeout within swapContent */
-  var pollTimer        = null;
+  var overlayEl = null;
+  var contentEl = null;
+  var triviaEl = null;
+  var triviaIndex = 0;
 
-  /* ── Clear all timers ── */
+  var wakeDetectTimer = null;
+  var triviaTimer = null;
+  var triviaFadeTimer = null;
+  var swapTimer = null;
+  var pollTimer = null;
+
   function cleanupTimers() {
+    clearTimeout(wakeDetectTimer);
     clearTimeout(triviaFadeTimer);
     clearTimeout(swapTimer);
-    clearInterval(countdownTimer);
     clearInterval(triviaTimer);
     clearInterval(pollTimer);
     healthCheckInFlight = false;
   }
 
-  /* ── Build countdown panel HTML ── */
-  function buildCountdownContent() {
-    var C = 628; /* 2π × r=100 */
+  function buildLoadingContent() {
     return [
-      '<div class="ct-countdown-wrap">',
-        '<svg viewBox="0 0 220 220" width="220" height="220">',
-          '<circle class="ct-countdown-ring-bg" cx="110" cy="110" r="100"/>',
-          '<circle class="ct-countdown-ring" id="ct-ring" cx="110" cy="110" r="100"',
-            ' stroke-dasharray="' + C + '" stroke-dashoffset="0"/>',
-        '</svg>',
-        '<div class="ct-countdown-inner">',
-          '<div class="ct-crosshair"></div>',
-          '<span class="ct-number" id="ct-number">' + LIMIT_SECS + '</span>',
+      '<div class="ct-loading-wrap">',
+        '<div class="ct-loading-char">' + PROJECTOR_SVG + '</div>',
+        '<div class="ct-progress-wrap" aria-hidden="true">',
+          '<div class="ct-progress-track"><span class="ct-progress-bar"></span></div>',
         '</div>',
-      '</div>',
-      '<p class="ct-status">영사기를 점검하고 필름을 정렬하고 있습니다. 잠시 후 상영이 시작됩니다.</p>',
-      '<div class="ct-trivia-wrap">',
-        '<span class="ct-trivia-label">기다리는 동안 영화 TMI</span>',
-        '<p class="ct-trivia-text" id="ct-trivia"></p>',
+        '<p class="ct-status">영사기를 점검하고 필름을 정렬하고 있습니다. 잠시 후 상영이 시작됩니다.</p>',
+        '<div class="ct-trivia-wrap">',
+          '<span class="ct-trivia-label">기다리는 동안 영화 TMI</span>',
+          '<p class="ct-trivia-text" id="ct-trivia"></p>',
+        '</div>',
       '</div>',
     ].join('');
   }
 
-  /* ── Build usage-limit / ended panel HTML ── */
-  function buildEndedContent() {
-    return [
-      '<div class="ct-ended-wrap">',
-        '<div class="ct-the-end">',
-          '<span class="ct-the-end-line"></span>',
-          '<span>THE&nbsp;END</span>',
-          '<span class="ct-the-end-line"></span>',
-        '</div>',
-        '<div class="ct-end-char">' + PROJECTOR_SVG + '</div>',
-        '<p class="ct-end-title">심야 상영 종료</p>',
-        '<p class="ct-end-sub">현재 영사기 정비 시간입니다.<br>다음 상영 시간에 다시 방문해 주세요.</p>',
-        '<div class="ct-credits-outer">',
-          '<div class="ct-credits-track">',
-            '<p class="ct-credit-head">A CineTMI Production</p>',
-            '<p class="ct-credit-dim">· · ·</p>',
-            '<p>상영관 안내&emsp;<span class="ct-credit-val">심야 점검 중</span></p>',
-            '<p>필름 보관실&emsp;<span class="ct-credit-val">정리 작업 진행</span></p>',
-            '<p>프로젝션 룸&emsp;<span class="ct-credit-val">장비 점검 중</span></p>',
-            '<p class="ct-credit-dim">· · ·</p>',
-            '<p>다음 상영 안내&emsp;<span class="ct-credit-val">곧 다시 오픈</span></p>',
-            '<p class="ct-credit-dim">· · ·</p>',
-            '<p class="ct-credit-head">관람해 주셔서 감사합니다 🎬</p>',
-          '</div>',
-        '</div>',
-        '<button class="ct-retry-btn" id="ct-retry">🔄 다시 시도하기</button>',
-      '</div>',
-    ].join('');
-  }
-
-  /* ── Create the shell overlay (called once on first use) ── */
   function initOverlay() {
     if (overlayEl) return;
     overlayEl = document.createElement('div');
@@ -197,7 +138,6 @@
     contentEl = overlayEl.querySelector('#ct-content');
   }
 
-  /* ── Cross-fade the content panel ── */
   function swapContent(htmlStr, afterSwap) {
     if (!contentEl) return;
     contentEl.style.opacity = '0';
@@ -205,24 +145,12 @@
       if (!contentEl) return;
       contentEl.innerHTML = htmlStr;
       if (afterSwap) afterSwap();
-      requestAnimationFrame(function () { if (contentEl) contentEl.style.opacity = '1'; });
+      requestAnimationFrame(function () {
+        if (contentEl) contentEl.style.opacity = '1';
+      });
     }, 360);
   }
 
-  /* ── Attach retry button listener ── */
-  function attachRetryBtn() {
-    var btn = document.getElementById('ct-retry');
-    if (btn) btn.addEventListener('click', function () { window.location.reload(); });
-  }
-
-  /* ── Update ring arc + number ── */
-  function updateCountdownDisplay() {
-    if (!numberEl || !ringEl) return;
-    numberEl.textContent = secondsLeft;
-    ringEl.style.strokeDashoffset = ((1 - secondsLeft / LIMIT_SECS) * 628).toFixed(2);
-  }
-
-  /* ── Trivia cross-fade ── */
   function rotateTriviaWithFade() {
     if (!triviaEl) return;
     triviaEl.classList.add('ct-fade');
@@ -234,9 +162,26 @@
     }, 520);
   }
 
-  /* ── Health probe: succeeds only on 2xx, all errors are retried until timeout ── */
+  function dismiss() {
+    if (dismissed) return;
+    dismissed = true;
+    state = 'DONE';
+    cleanupTimers();
+    if (!overlayEl) return;
+
+    overlayEl.style.opacity = '0';
+    overlayEl.style.pointerEvents = 'none';
+    overlayEl.style.touchAction = 'auto';
+    overlayEl.addEventListener('transitionend', function handler() {
+      overlayEl.removeEventListener('transitionend', handler);
+      if (overlayEl && overlayEl.parentNode) overlayEl.parentNode.removeChild(overlayEl);
+      overlayEl = null;
+      contentEl = null;
+    });
+  }
+
   function performHealthCheck() {
-    if (dismissed || state !== 'COUNTDOWN' || healthCheckInFlight) return;
+    if (dismissed || state !== 'LOADING' || healthCheckInFlight) return;
     healthCheckInFlight = true;
 
     var reqCtrl = window.AbortController ? new AbortController() : null;
@@ -247,10 +192,10 @@
 
     fetch(HEALTH_URL, { method: 'GET', cache: 'no-store', signal: reqSignal })
       .then(function (res) {
-        if (res.ok) dismiss();
+        if (res.status === 200) dismiss();
       })
       .catch(function () {
-        /* keep waiting until countdown expires */
+        /* keep waiting */
       })
       .finally(function () {
         clearTimeout(reqTimeout);
@@ -258,89 +203,45 @@
       });
   }
 
-  /* ════════════════════════════════════════════════
-   *  CASE B — Show countdown (server is sleeping)
-   * ════════════════════════════════════════════════ */
-  function showCountdown() {
-    if (state === 'COUNTDOWN' || state === 'DONE' || state === 'ENDED') return;
-    state = 'COUNTDOWN';
-    secondsLeft = LIMIT_SECS;
-    countdownDeadlineAt = Date.now() + LIMIT_SECS * 1000;
-    initOverlay();
-    swapContent(buildCountdownContent(), function () {
-      numberEl = contentEl.querySelector('#ct-number');
-      ringEl   = contentEl.querySelector('#ct-ring');
-      triviaEl = contentEl.querySelector('#ct-trivia');
+  function showLoadingOverlay() {
+    if (loadingStarted || dismissed || state === 'DONE') return;
+    loadingStarted = true;
+    state = 'LOADING';
 
+    initOverlay();
+    swapContent(buildLoadingContent(), function () {
+      triviaEl = contentEl.querySelector('#ct-trivia');
       triviaIndex = Math.floor(Math.random() * movieTrivia.length);
       triviaEl.textContent = movieTrivia[triviaIndex];
-      updateCountdownDisplay();
 
-      /* Tick every second; switch to ended when limit reached */
-      countdownTimer = setInterval(function () {
-        secondsLeft = Math.max(0, Math.ceil((countdownDeadlineAt - Date.now()) / 1000));
-        updateCountdownDisplay();
-        if (secondsLeft <= 0) {
-          clearInterval(countdownTimer);
-          switchToEnded();
-        }
-      }, 1000);
-
-      /* Trivia rotation */
       triviaTimer = setInterval(rotateTriviaWithFade, TRIVIA_INTERVAL);
-
-      /* Always show countdown first; keep probing in the background */
       performHealthCheck();
       pollTimer = setInterval(performHealthCheck, PROBE_INTERVAL);
     });
   }
 
-  /* ════════════════════════════════════════════════
-   *  CASE A — Show ended (immediate error / limit)
-   * ════════════════════════════════════════════════ */
-  function showEnded() {
-    if (state === 'ENDED' || state === 'DONE') return;
-    state = 'ENDED';
-    cleanupTimers();
-    initOverlay();
-    var sb = document.getElementById('ct-standby');
-    if (sb) sb.style.display = 'none';
-    swapContent(buildEndedContent(), attachRetryBtn);
-  }
-
-  /* ─ Transition COUNTDOWN → ENDED (90 s limit or late error) ─ */
-  function switchToEnded() {
-    if (state === 'ENDED' || state === 'DONE') return;
-    state = 'ENDED';
-    cleanupTimers();
-    var sb = document.getElementById('ct-standby');
-    if (sb) sb.style.display = 'none';
-    swapContent(buildEndedContent(), attachRetryBtn);
-  }
-
-  /* ─ Dismiss overlay (200 OK received) ─ */
-  function dismiss() {
-    if (dismissed) return;
-    dismissed = true;
-    state = 'DONE';
-    cleanupTimers();
-    if (!overlayEl) return;
-    overlayEl.style.opacity       = '0';
-    overlayEl.style.pointerEvents = 'none';
-    overlayEl.style.touchAction   = 'auto';
-    overlayEl.addEventListener('transitionend', function handler() {
-      overlayEl.removeEventListener('transitionend', handler);
-      if (overlayEl && overlayEl.parentNode) overlayEl.parentNode.removeChild(overlayEl);
-      overlayEl = null; contentEl = null;
-    });
-  }
-
-  /* ── Main health probe ── */
   function probe() {
-    showCountdown();
+    var startupCtrl = window.AbortController ? new AbortController() : null;
+    var startupSignal = startupCtrl ? startupCtrl.signal : undefined;
+
+    wakeDetectTimer = setTimeout(function () {
+      if (startupCtrl) startupCtrl.abort();
+      showLoadingOverlay();
+    }, WAKE_DETECT_MS);
+
+    fetch(HEALTH_URL, { method: 'GET', cache: 'no-store', signal: startupSignal })
+      .then(function () {
+        clearTimeout(wakeDetectTimer);
+        if (loadingStarted) return;
+        dismissed = true;
+        state = 'DONE';
+      })
+      .catch(function (err) {
+        if (err && err.name === 'AbortError') return;
+        /* Keep waiting for WAKE_DETECT_MS gate, then show overlay if still unresolved. */
+      });
   }
 
-  /* ── Boot ── */
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', probe);
   } else {
