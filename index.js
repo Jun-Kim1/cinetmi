@@ -12,6 +12,28 @@
   const boTrack = document.getElementById('bo-track');
   const boScroll= document.getElementById('bo-scroll');
   let boxLoadToken = 0;
+  let boxRetryTimer = null;
+  let searchProbeTimer = null;
+
+  const appReadyState = {
+    box: false,
+    search: false,
+    signaled: false,
+  };
+
+  function emitAppReadyIfDone() {
+    if (appReadyState.signaled) return;
+    if (!appReadyState.box || !appReadyState.search) return;
+    appReadyState.signaled = true;
+    window.CT_APP_READY = true;
+    window.dispatchEvent(new Event('ct:app-ready'));
+  }
+
+  function markAppReady(key) {
+    if (appReadyState[key]) return;
+    appReadyState[key] = true;
+    emitAppReadyIfDone();
+  }
 
   /* ─── HTML escape (XSS) ─── */
   function esc(s) {
@@ -48,6 +70,26 @@
 
   function wait(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  async function probeSearchReady() {
+    try {
+      await tfetch('/search/multi?language=ko-KR&query=a');
+      markAppReady('search');
+      return true;
+    } catch (err) {
+      console.warn('[CineTMI] search probe failed, retrying:', err);
+      return false;
+    }
+  }
+
+  function scheduleSearchProbe(delayMs) {
+    clearTimeout(searchProbeTimer);
+    searchProbeTimer = setTimeout(async function () {
+      if (appReadyState.search) return;
+      var ok = await probeSearchReady();
+      if (!ok) scheduleSearchProbe(4000);
+    }, delayMs);
   }
 
   async function fetchNowPlayingWithFallback() {
@@ -270,6 +312,9 @@
       list.forEach((m, i) => fragment.append(makeCard(m, i + 1)));
       boTrack.replaceChildren(fragment);
       commitBoxOfficeRender(resetScroll);
+      clearTimeout(boxRetryTimer);
+      markAppReady('box');
+      return true;
     } catch(e) {
       if (loadToken !== boxLoadToken) return;
       console.error('[CineTMI] chart load failed:', e);
@@ -280,15 +325,25 @@
         return loadBox({ resetScroll, retryLeft: retryLeft - 1 });
       }
 
-      if (resetScroll) resetBoxOfficeScroll();
-      boTrack.style.transition = 'none';
-      boTrack.style.opacity = '1';
-      boTrack.innerHTML = '<p style="color:rgba(255,255,255,.2);font-size:.8rem;padding:.5rem 0">Failed to load chart data.</p>';
+      /* Keep previous cards visible; if empty, show soft preparing message and retry. */
+      if (!boTrack.children.length) {
+        if (resetScroll) resetBoxOfficeScroll();
+        boTrack.style.transition = 'none';
+        boTrack.style.opacity = '1';
+        boTrack.innerHTML = '<p style="color:rgba(255,255,255,.35);font-size:.8rem;padding:.5rem 0">상영관 데이터를 준비 중입니다...</p>';
+      }
+
+      clearTimeout(boxRetryTimer);
+      boxRetryTimer = setTimeout(function () {
+        loadBox({ resetScroll: false, retryLeft: 2 });
+      }, 4000);
+      return false;
     }
   }
 
   function hydrateHomePage() {
     loadBox({ resetScroll: true });
+    scheduleSearchProbe(0);
     loadTrending();
     loadTodayPick();
     const startLogoAnim = () => requestAnimationFrame(runLogoAnim);

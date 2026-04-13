@@ -86,6 +86,8 @@
   var dismissed = false;
   var loadingStarted = false;
   var healthCheckInFlight = false;
+  var backendReady = false;
+  var appReady = window.CT_APP_READY === true;
 
   var overlayEl = null;
   var contentEl = null;
@@ -164,12 +166,41 @@
     }, 520);
   }
 
+  /* Optional fan-detail: tiny "swoong" style power-down sound on dismiss. */
+  function playSaberOffSfx() {
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      var ac = new AC();
+      var osc = ac.createOscillator();
+      var gain = ac.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(580, ac.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(95, ac.currentTime + 0.16);
+
+      gain.gain.setValueAtTime(0.0001, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.018, ac.currentTime + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.2);
+
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.start(ac.currentTime);
+      osc.stop(ac.currentTime + 0.21);
+      osc.onended = function () { ac.close(); };
+    } catch (_e) {
+      /* ignore audio failures; visual transition remains primary */
+    }
+  }
+
   function dismiss() {
     if (dismissed) return;
     dismissed = true;
     state = 'DONE';
     cleanupTimers();
     if (!overlayEl) return;
+
+    playSaberOffSfx();
 
     overlayEl.style.opacity = '0';
     overlayEl.style.pointerEvents = 'none';
@@ -180,6 +211,10 @@
       overlayEl = null;
       contentEl = null;
     });
+  }
+
+  function tryDismiss() {
+    if (backendReady && appReady) dismiss();
   }
 
   function performHealthCheck() {
@@ -194,7 +229,10 @@
 
     fetch(HEALTH_URL, { method: 'GET', cache: 'no-store', signal: reqSignal })
       .then(function (res) {
-        if (res.status === 200) dismiss();
+        if (res.status === 200) {
+          backendReady = true;
+          tryDismiss();
+        }
       })
       .catch(function () {
         /* keep waiting */
@@ -234,9 +272,9 @@
     fetch(HEALTH_URL, { method: 'GET', cache: 'no-store', signal: startupSignal })
       .then(function () {
         clearTimeout(wakeDetectTimer);
+        backendReady = true;
         if (loadingStarted) return;
-        dismissed = true;
-        state = 'DONE';
+        /* Overlay was never shown; main page can continue normally. */
       })
       .catch(function (err) {
         if (err && err.name === 'AbortError') return;
@@ -249,4 +287,9 @@
   } else {
     probe();
   }
+
+  window.addEventListener('ct:app-ready', function () {
+    appReady = true;
+    tryDismiss();
+  });
 })();
