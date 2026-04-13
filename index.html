@@ -1,0 +1,213 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>CineTMI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://image.tmdb.org" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="loading.css" />
+  <link rel="stylesheet" href="index.css" />
+  <link rel="stylesheet" href="character.css" />
+</head>
+<body>
+
+<!-- ════════ TICKER ════════ -->
+<div class="ticker-strip">
+  <div class="ticker-track">
+    <span class="ticker-item">BEHIND THE STORY</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">SINCE 2026</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">CINEMATIC UNIVERSE</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">DATA DRIVEN</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">BEHIND THE STORY</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">SINCE 2026</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">CINEMATIC UNIVERSE</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">DATA DRIVEN</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">BEHIND THE STORY</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">SINCE 2026</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">CINEMATIC UNIVERSE</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">DATA DRIVEN</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">BEHIND THE STORY</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">SINCE 2026</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">CINEMATIC UNIVERSE</span>
+    <span class="ticker-item ticker-dot">·</span>
+    <span class="ticker-item">DATA DRIVEN</span>
+    <span class="ticker-item ticker-dot">·</span>
+  </div>
+</div>
+
+<!-- ════════ HERO ════════ -->
+<section class="hero">
+
+  <!-- Clapper board SVG (animated stick) -->
+  <div class="clapper-wrap">
+    <svg width="88" height="118" viewBox="0 -30 88 118" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Board body -->
+      <rect x="2" y="38" width="84" height="48" rx="5" fill="#181818" stroke="#facc15" stroke-width="1.5"/>
+      <!-- Yellow stripe band at top of body -->
+      <clipPath id="cb2"><rect x="3.75" y="38" width="80.5" height="13"/></clipPath>
+      <rect x="3.75" y="38" width="80.5" height="13" fill="#facc15"/>
+      <g clip-path="url(#cb2)">
+        <polygon points="2,51 14,38 24,38 12,51"  fill="#111"/>
+        <polygon points="22,51 34,38 44,38 32,51" fill="#111"/>
+        <polygon points="42,51 54,38 64,38 52,51" fill="#111"/>
+        <polygon points="62,51 74,38 84,38 72,51" fill="#111"/>
+      </g>
+      <!-- Body lines -->
+      <rect x="12" y="60" width="48" height="3" rx="1.5" fill="#2a2a2a"/>
+      <rect x="12" y="68" width="36" height="3" rx="1.5" fill="#2a2a2a"/>
+      <rect x="12" y="76" width="42" height="3" rx="1.5" fill="#252525"/>
+      <!-- Pin (pivot point, static) -->
+      <circle cx="10" cy="38" r="3.5" fill="#e8b800"/>
+      <!-- Animated clapper stick group — rotates around left hinge -->
+      <g class="clapper-stick">
+        <rect x="2" y="14" width="84" height="24" rx="5" fill="#facc15"/>
+        <clipPath id="cs2"><rect x="2" y="14" width="84" height="24" rx="5"/></clipPath>
+        <g clip-path="url(#cs2)">
+          <polygon points="2,38  16,14 26,14 12,38"  fill="#111"/>
+          <polygon points="24,38 38,14 48,14 34,38"  fill="#111"/>
+          <polygon points="46,38 60,14 70,14 56,38"  fill="#111"/>
+          <polygon points="68,38 82,14 92,14 78,38"  fill="#111"/>
+        </g>
+        <circle cx="78" cy="26" r="3.2" fill="#e8b800"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- Logo: ball bounces C→I→N→E→T→M→I, each letter lights up on landing -->
+  <div class="logo-main" id="logo-main">
+    <div class="logo-ball" id="logo-ball"></div>
+    <span class="logo-c"><span class="logo-letter lc">C</span><span class="logo-letter lc">I</span><span class="logo-letter lc">N</span><span class="logo-letter lc">E</span></span><span class="logo-t"><span class="logo-letter lt">T</span><span class="logo-letter lt">M</span><span class="logo-letter lt">I</span></span>
+  </div>
+  <div class="logo-sub">MOVIE &amp; TV SERIES · KNOWLEDGE BASE</div>
+
+  <!-- Search -->
+  <div class="search-outer">
+    <div class="search-wrap">
+      <input id="search-inp" class="search-input" type="search" placeholder="TMI가 궁금한 영화 제목을 검색하세요." autocomplete="off" />
+      <button id="search-btn" class="search-btn" aria-label="검색">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#04050e" stroke-width="2.6" stroke-linecap="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </button>
+      <div id="ac-drop" class="ac-drop" style="display:none"></div>
+    </div>
+    <!-- Trending chips -->
+    <div class="trending-row" id="trending-row">
+      <span class="trending-lbl">🔥 NOW TRENDING</span>
+      <div id="trend-chips" style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════ DIVIDER ════════ -->
+<div class="divider" style="margin-bottom:1.8rem"></div>
+
+<!-- ════════ BOX OFFICE ════════ -->
+<div class="bo-section">
+  <div class="section-wrap">
+    <div class="section-head">
+      <h2 class="section-title">BOX OFFICE</h2>
+      <span class="section-sub">NOW PLAYING · KOREA</span>
+    </div>
+    <div class="bo-scroll-outer" id="bo-scroll">
+      <div class="bo-track" id="bo-track">
+        <div class="bo-skel" style="width:168px;flex-shrink:0"><div class="skel-bar" style="aspect-ratio:2/3"></div><div style="padding:.65rem .62rem"><div class="skel-bar" style="height:10px;width:50%;margin-bottom:.4rem"></div><div class="skel-bar" style="height:14px;width:80%;margin-bottom:.35rem"></div><div class="skel-bar" style="height:3px"></div></div></div>
+        <div class="bo-skel" style="width:150px;flex-shrink:0"><div class="skel-bar" style="aspect-ratio:2/3"></div><div style="padding:.65rem .62rem"><div class="skel-bar" style="height:10px;width:50%;margin-bottom:.4rem"></div><div class="skel-bar" style="height:14px;width:80%;margin-bottom:.35rem"></div><div class="skel-bar" style="height:3px"></div></div></div>
+        <div class="bo-skel" style="width:136px;flex-shrink:0"><div class="skel-bar" style="aspect-ratio:2/3"></div><div style="padding:.65rem .62rem"><div class="skel-bar" style="height:10px;width:50%;margin-bottom:.4rem"></div><div class="skel-bar" style="height:14px;width:80%;margin-bottom:.35rem"></div><div class="skel-bar" style="height:3px"></div></div></div>
+        <div class="bo-skel" style="width:120px;flex-shrink:0"><div class="skel-bar" style="aspect-ratio:2/3"></div><div style="padding:.65rem .62rem"><div class="skel-bar" style="height:10px;width:50%;margin-bottom:.4rem"></div><div class="skel-bar" style="height:14px;width:80%;margin-bottom:.35rem"></div><div class="skel-bar" style="height:3px"></div></div></div>
+        <div class="bo-skel" style="width:120px;flex-shrink:0"><div class="skel-bar" style="aspect-ratio:2/3"></div><div style="padding:.65rem .62rem"><div class="skel-bar" style="height:10px;width:50%;margin-bottom:.4rem"></div><div class="skel-bar" style="height:14px;width:80%;margin-bottom:.35rem"></div><div class="skel-bar" style="height:3px"></div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════ DIVIDER ════════ -->
+<div class="divider" style="margin-top:0"></div>
+
+<!-- ════════ TODAY'S PICK ════════ -->
+<div class="pick-section">
+  <div class="section-wrap">
+    <div class="section-head">
+      <h2 class="section-title">TODAY'S PICK</h2>
+      <span class="section-sub">DAILY RANDOM RECOMMENDATION</span>
+    </div>
+    <div class="pick-frame" id="pick-frame">
+      <div class="pick-head">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(212,175,55,.7)" stroke-width="2" stroke-linecap="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        CURATED FOR YOU
+      </div>
+      <div id="pick-idle">
+        <button class="pick-trigger" id="pick-btn">🎬 오늘의 영화 추천받기</button>
+        <div class="pick-chances" id="pick-chances"></div>
+      </div>
+      <div class="pick-loader" id="pick-loader">
+        <div class="pick-reel-wrap">
+          <div class="pick-reel-glow"></div>
+          <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="32" cy="32" r="28" stroke="rgba(96,165,250,.18)" stroke-width="2.5" fill="none"/>
+            <circle cx="32" cy="32" r="28" stroke="#60a5fa" stroke-width="2.5" fill="none" stroke-dasharray="44 132" stroke-linecap="round"/>
+            <circle cx="32" cy="32" r="8" fill="rgba(96,165,250,.15)" stroke="rgba(96,165,250,.4)" stroke-width="1.5"/>
+            <circle cx="32" cy="32" r="2.5" fill="#60a5fa"/>
+            <rect x="30.5" y="2" width="3" height="7" rx="1.5" fill="rgba(96,165,250,.5)"/>
+            <rect x="30.5" y="55" width="3" height="7" rx="1.5" fill="rgba(96,165,250,.3)"/>
+            <rect x="55" y="30.5" width="7" height="3" rx="1.5" fill="rgba(96,165,250,.3)"/>
+            <rect x="2" y="30.5" width="7" height="3" rx="1.5" fill="rgba(96,165,250,.5)"/>
+            <circle cx="20" cy="20" r="4" fill="none" stroke="rgba(96,165,250,.22)" stroke-width="1.2"/>
+            <circle cx="44" cy="20" r="4" fill="none" stroke="rgba(96,165,250,.22)" stroke-width="1.2"/>
+            <circle cx="20" cy="44" r="4" fill="none" stroke="rgba(96,165,250,.22)" stroke-width="1.2"/>
+            <circle cx="44" cy="44" r="4" fill="none" stroke="rgba(96,165,250,.22)" stroke-width="1.2"/>
+          </svg>
+        </div>
+        <div class="pick-loader-txt">영화를 고르고 있어요...</div>
+      </div>
+      <div class="pick-result" id="pick-result"></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider" style="margin-top:1rem"></div>
+
+<!-- ════════ FOOTER ════════ -->
+<footer>
+  <div class="footer">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="footer-logo-row">
+          <span class="fc">CINE</span><span class="ft">TMI</span>
+        </div>
+        <div class="footer-tagline">COMMUNITY DRIVEN CINEMATIC INTELLIGENCE</div>
+      </div>
+      <div class="footer-pills">
+        <span class="f-pill">TMDB API V3</span>
+        <span class="f-pill">SUPABASE</span>
+        <span class="f-pill">VANILLA JS</span>
+      </div>
+    </div>
+    <div class="footer-copy">
+      © 2026 CINETMI · THIS PRODUCT USES THE TMDB API BUT IS NOT ENDORSED OR CERTIFIED BY TMDB
+    </div>
+  </div>
+</footer>
+
+<script src="loading.js" charset="UTF-8"></script>
+<script src="index.js" charset="UTF-8" defer></script>
+<script src="character.js" charset="UTF-8" defer></script>
+</body>
+</html>
