@@ -240,7 +240,10 @@ async function fetchNowPlayingWithFallback() {
     const yr  = (m.release_date || '').slice(0, 4);
 
     /* [추가] 제목 언어 폴백 로직: 한국어 제목(m.title)이 없으면 영어/원문(original_title) 사용 */
-    const displayTitle = m.title || m.original_title || '—';
+    const hasKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(m.title || '');
+    const displayTitle = hasKorean 
+      ? (m.title || '—') 
+      : (m.original_title || m.title || '—');
 
     /* genres — up to 2 tags */
     const genreTags = (m.genre_ids || []).slice(0, 2)
@@ -1007,12 +1010,20 @@ async function loadBox({ resetScroll = false, retryLeft = 1 } = {}) {
 
         /* 상세 (tagline, overview, genres) */
         let tagline = '';
-        let genres  = movie.genre_ids || [];
-        if (detailRes.status === 'fulfilled') {
-          const d = detailRes.value;
-          tagline = d.tagline || '';
-          if (d.title) movie.title = d.title;
-          if (d.overview) movie.overview = d.overview;
+let genres  = movie.genre_ids || [];
+if (detailRes.status === 'fulfilled') {
+    const d = detailRes.value;
+    
+    // 한국어 데이터가 너무 부실한 경우 (러시아 영화 등)
+    if (!d.overview || d.overview.length < 5) {
+        // 영어 데이터를 한 번 더 가져오는 로직을 추가하거나 
+        // 이미 fetchMulti 등에서 가져온 원문 데이터를 활용하도록 title 설정
+        movie.title = d.title || movie.original_title;
+        movie.overview = d.overview || "Information in Korean is not available.";
+    } else {
+        movie.title = d.title;
+        movie.overview = d.overview;
+    }
           if (d.genres) genres = d.genres.map(g => g.id);
           movie.genre_ids = genres;
           if (d.vote_average != null && d.vote_average > 0) movie.vote_average = d.vote_average;
