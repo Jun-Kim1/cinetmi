@@ -92,14 +92,14 @@
     }, delayMs);
   }
 
-  async function fetchNowPlayingWithFallback() {
-    try {
-      return await tfetch('/movie/now_playing?language=ko-KR&region=KR');
-    } catch (err) {
-      console.warn('[CineTMI] now_playing failed, fallback to trending/movie/day:', err);
-      return tfetch('/trending/movie/day?language=ko-KR');
-    }
+ async function fetchNowPlayingWithFallback() {
+  try {
+    // 호출 시점에 정렬 기준을 명시합니다.
+    return await tfetch('/movie/now_playing?language=ko-KR&region=KR&sort_by=popularity.desc');
+  } catch (err) {
+    return tfetch('/trending/movie/day?language=ko-KR');
   }
+}
 
   /* ─── Autocomplete ─── */
   let acTimer = null;
@@ -301,17 +301,24 @@
   }
 
   /* ─── Load box office ─── */
-  async function loadBox({ resetScroll = false, retryLeft = 1 } = {}) {
+ async function loadBox({ resetScroll = false, retryLeft = 1 } = {}) {
     const loadToken = ++boxLoadToken;
     prepareBoxOfficeRender(resetScroll);
     try {
       const data = await fetchNowPlayingWithFallback();
       if (loadToken !== boxLoadToken) return;
-      const list = (data.results || []).slice(0, 10);
+
+      // [수정된 부분]: 데이터를 가져온 직후, 인기도(popularity) 기준으로 확실하게 내림차순 정렬을 수행합니다.
+      // 이렇게 해야 10초 만에 새로고침해도 영화 순서가 무작위로 바뀌는 현상을 막을 수 있습니다.
+      const list = (data.results || [])
+        .sort((a, b) => (b.popularity || 0) - (a.popularity || 0)) // 인기도 높은 순으로 정렬
+        .slice(0, 10); // 상위 10개 추출
+
       const fragment = document.createDocumentFragment();
       list.forEach((m, i) => fragment.append(makeCard(m, i + 1)));
       boTrack.replaceChildren(fragment);
       commitBoxOfficeRender(resetScroll);
+      
       clearTimeout(boxRetryTimer);
       markAppReady('box');
       return true;

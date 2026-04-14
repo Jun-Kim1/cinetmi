@@ -80,18 +80,23 @@ app.use(express.static(path.join(__dirname), {
  */
 app.get('/api/tmdb/*', async (req, res) => {
   const tmdbPath = req.params[0];
-  if (!tmdbPath) {
-    return res.status(400).json({ error: 'Missing TMDB path' });
-  }
+  if (!tmdbPath) return res.status(400).json({ error: 'Missing TMDB path' });
 
-  /* Merge client params, then overwrite api_key with the server secret */
-  const params = { ...req.query, api_key: TMDB_KEY };
+  // [수정] 순서가 뒤섞이지 않도록 인기도순 정렬을 '기본값'으로 넣습니다.
+  // 이렇게 하면 10초 뒤에 새로고침해도 똑같은 '인기도 기준'으로 가져옵니다.
+  const params = { 
+    sort_by: 'popularity.desc', 
+    ...req.query, 
+    api_key: TMDB_KEY 
+  };
 
   try {
-    const { data } = await axios.get(`${TMDB_BASE}/${tmdbPath}`, {
-      params,
-      timeout: 8000,
-    });
+    const { data } = await axios.get(`${TMDB_BASE}/${tmdbPath}`, { params, timeout: 8000 });
+
+    // [수정] 캐시를 0으로 설정해서 새로고침할 때마다 TMDB의 최신 데이터를 즉시 가져오게 합니다.
+    // 하지만 'no-cache'를 통해 브라우저가 매번 서버의 최신 상태를 확인하도록 강제합니다.
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    
     res.json(data);
   } catch (err) {
     if (err.response) {
