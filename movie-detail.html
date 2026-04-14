@@ -974,11 +974,11 @@
   
   // finalTitle 변수 하나로 통일해서 에러 방지
   const finalTitle = hasKorean 
-    ? (item.title || item.name || '—') 
-    : (item.original_title || item.original_name || item.title || item.name || '—');
+  ? (item.title || item.name || '—') 
+  : (item.original_title || item.original_name || item.title || item.name || '—');
   
   mediaTitle = finalTitle; 
-  el.ttl.textContent = finalTitle;
+el.ttl.textContent = finalTitle;
     // ──────────────────────────────────────────────────────
 
     // Director / Creator
