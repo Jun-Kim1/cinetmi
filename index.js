@@ -93,15 +93,25 @@
   }
 
 async function fetchNowPlayingWithFallback() {
+  // 오늘 날짜 구하기 (2026-04-14)
   const today = new Date().toISOString().slice(0, 10);
   
   try {
-    // with_release_type=3 만 넣어서 '극장(제한)' 영화를 원천 차단합니다.
-    // primary_release_date.lte를 통해 미래 개봉작도 차단합니다.
-    const path = `/discover/movie?language=ko-KR&region=KR&sort_by=popularity.desc&primary_release_date.lte=${today}&with_release_type=3`;
-    return await tfetch(path);
+    // 1. region=KR: 한국 지역 기준
+    // 2. with_release_type=3: 일반 극장 개봉작 중심 (제한 상영 제외 시 3만 사용)
+    // 3. primary_release_date.lte: 오늘 날짜까지만 (미래 개봉 예정작 차단)
+    // 4. sort_by=popularity.desc: 인기도 내림차순 (스크린샷 정렬 기준과 동일)
+    
+    const url = `/discover/movie?language=ko-KR` +
+                `&region=KR` +
+                `&sort_by=popularity.desc` +
+                `&primary_release_date.lte=${today}` +
+                `&with_release_type=3` + 
+                `&include_adult=false`; // 성인물 제외
+
+    return await tfetch(url);
   } catch (err) {
-    console.warn('[CineTMI] API 호출 실패, 인기 영화로 대체');
+    console.warn('[CineTMI] 상영작 호출 실패, 인기 순위로 대체');
     return tfetch('/movie/popular?language=ko-KR&region=KR');
   }
 }
@@ -316,7 +326,7 @@ async function fetchNowPlayingWithFallback() {
 
     // [버그 수정] 서버가 깨어난 직후 데이터가 섞이지 않도록 여기서 한 번 더 확실히 정렬합니다.
     const list = (data.results || [])
-      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0)) // 인기도 내림차순 정렬
+      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
       .slice(0, 10);
 
     const fragment = document.createDocumentFragment();
