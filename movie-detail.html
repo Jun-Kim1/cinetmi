@@ -971,15 +971,14 @@
     // ───────────────── [제목 로직: 변수명 통일] ─────────────────
     // 1. 한국어 제목(item.title/name)에 한글이 있는지 검사
     const hasKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(item.title || item.name || '');
-    
-    // 2. 최종 제목 결정 (hasKorean이 false면 영어 원문인 original_title 사용)
-    const finalTitle = hasKorean 
-      ? (item.title || item.name || '—') 
-      : (item.original_title || item.original_name || item.title || item.name || '—');
-    
-    // 3. 화면 및 전역 변수에 적용 (여기서 title이라는 선언되지 않은 변수를 쓰면 에러남)
-    mediaTitle = finalTitle; 
-    el.ttl.textContent = finalTitle;
+  
+  // finalTitle 변수 하나로 통일해서 에러 방지
+  const finalTitle = hasKorean 
+    ? (item.title || item.name || '—') 
+    : (item.original_title || item.original_name || item.title || item.name || '—');
+  
+  mediaTitle = finalTitle; 
+  el.ttl.textContent = finalTitle;
     // ──────────────────────────────────────────────────────
 
     // Director / Creator
@@ -1008,9 +1007,9 @@
 
     // Modal chip (여기도 finalTitle로 통일)
     el.mChip.innerHTML = `<span class="movie-chip">${isTV ? '📺' : '🎬'} ${finalTitle}</span>`;
-
-    setView('det');
-  }
+  
+  setView('det');
+}
 
   /* ─── Load TMI posts ─── */
   async function loadTmi() {

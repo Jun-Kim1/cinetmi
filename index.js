@@ -245,8 +245,8 @@ async function fetchNowPlayingWithFallback() {
     
     // 2. 한글이 있으면 m.title, 없으면 영어 원문인 m.original_title 사용
     const displayTitle = hasKorean 
-      ? (m.title || '—') 
-      : (m.original_title || m.title || '—');
+    ? (m.title || '—') 
+    : (m.original_title || m.title || '—');
     // ────────────────────────────────────────────────────────────
 
     /* genres — up to 2 tags */
