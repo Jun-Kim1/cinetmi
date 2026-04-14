@@ -82,8 +82,8 @@ app.get('/api/tmdb/*', async (req, res) => {
   const tmdbPath = req.params[0];
   if (!tmdbPath) return res.status(400).json({ error: 'Missing TMDB path' });
 
-  // [수정] 순서가 뒤섞이지 않도록 인기도순 정렬을 '기본값'으로 넣습니다.
-  // 이렇게 하면 10초 뒤에 새로고침해도 똑같은 '인기도 기준'으로 가져옵니다.
+  // 1. 인기순(popularity.desc)으로 기준을 아예 고정합니다.
+  // 2. append_to_response 등을 위해 쿼리를 병합합니다.
   const params = { 
     sort_by: 'popularity.desc', 
     ...req.query, 
@@ -92,11 +92,9 @@ app.get('/api/tmdb/*', async (req, res) => {
 
   try {
     const { data } = await axios.get(`${TMDB_BASE}/${tmdbPath}`, { params, timeout: 8000 });
-
-    // [수정] 캐시를 0으로 설정해서 새로고침할 때마다 TMDB의 최신 데이터를 즉시 가져오게 합니다.
-    // 하지만 'no-cache'를 통해 브라우저가 매번 서버의 최신 상태를 확인하도록 강제합니다.
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     
+    // 캐시 설정 (실시간 반영을 위해 0으로 두되, 순서 보장을 위해 정렬은 index.js에서 수행)
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.json(data);
   } catch (err) {
     if (err.response) {

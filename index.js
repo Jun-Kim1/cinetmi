@@ -93,25 +93,12 @@
   }
 
 async function fetchNowPlayingWithFallback() {
-  // 오늘 날짜 구하기 (2026-04-14)
   const today = new Date().toISOString().slice(0, 10);
-  
   try {
-    // 1. region=KR: 한국 지역 기준
-    // 2. with_release_type=3: 일반 극장 개봉작 중심 (제한 상영 제외 시 3만 사용)
-    // 3. primary_release_date.lte: 오늘 날짜까지만 (미래 개봉 예정작 차단)
-    // 4. sort_by=popularity.desc: 인기도 내림차순 (스크린샷 정렬 기준과 동일)
-    
-    const url = `/discover/movie?language=ko-KR` +
-                `&region=KR` +
-                `&sort_by=popularity.desc` +
-                `&primary_release_date.lte=${today}` +
-                `&with_release_type=3` + 
-                `&include_adult=false`; // 성인물 제외
-
-    return await tfetch(url);
+    // 인기순으로 밖아버림 + 미래 영화는 일단 제외
+    // language=ko-KR로 요청해도 TMDB는 원문(original_title) 정보를 같이 줍니다.
+    return await tfetch(`/discover/movie?language=ko-KR&region=KR&sort_by=popularity.desc&primary_release_date.lte=${today}&with_release_type=3`);
   } catch (err) {
-    console.warn('[CineTMI] 상영작 호출 실패, 인기 순위로 대체');
     return tfetch('/movie/popular?language=ko-KR&region=KR');
   }
 }
@@ -241,7 +228,7 @@ async function fetchNowPlayingWithFallback() {
   };
 
   /* ─── Build card ─── */
-  function makeCard(m, rank) {
+ function makeCard(m, rank) {
     const rCls = rank === 1 ? 'bo-r1' : rank === 2 ? 'bo-r2' : rank === 3 ? 'bo-r3' : '';
     const delay = ((rank - 1) * 0.07) + 's';
 
@@ -251,6 +238,9 @@ async function fetchNowPlayingWithFallback() {
     const pct = Math.min(100, vr * 10);
     const pop = gpop(m.popularity || 0);
     const yr  = (m.release_date || '').slice(0, 4);
+
+    /* [추가] 제목 언어 폴백 로직: 한국어 제목(m.title)이 없으면 영어/원문(original_title) 사용 */
+    const displayTitle = m.title || m.original_title || '—';
 
     /* genres — up to 2 tags */
     const genreTags = (m.genre_ids || []).slice(0, 2)
@@ -265,17 +255,19 @@ async function fetchNowPlayingWithFallback() {
     card.style.animationDelay = delay;
 
     const poster = m.poster_path ? IMG_BASE + 'w342' + m.poster_path : '';
+    
+    // innerHTML 내의 ${esc(m.title)} 부분을 모두 ${esc(displayTitle)}로 바꿨습니다.
     card.innerHTML = `
       <div class="bo-poster-wrap">
         ${poster
-          ? `<img class="bo-poster" src="${esc(poster)}" alt="${esc(m.title)}" loading="lazy" decoding="async" />`
+          ? `<img class="bo-poster" src="${esc(poster)}" alt="${esc(displayTitle)}" loading="lazy" decoding="async" />`
           : `<div class="bo-poster"></div>`}
         <div class="rank-num">#${rank}</div>
       </div>
       <div class="bo-info">
         ${yr ? `<div class="bo-year">${yr}</div>` : ''}
         ${genreTags ? `<div class="bo-genres">${genreTags}</div>` : ''}
-        <div class="bo-title">${esc(m.title || '—')}</div>
+        <div class="bo-title">${esc(displayTitle)}</div> 
         <div style="margin-top:.32rem">
           <div class="gauge-lbl">
             <span class="gauge-key">RATING</span>
@@ -294,7 +286,7 @@ async function fetchNowPlayingWithFallback() {
       location.href = 'movie-detail.html?id=' + m.id + '&type=movie';
     });
     return card;
-  }
+}
 
   function resetBoxOfficeScroll() {
     boScroll.scrollLeft = 0;
@@ -316,29 +308,26 @@ async function fetchNowPlayingWithFallback() {
   }
 
   /* ─── Load box office ─── */
- async function loadBox({ resetScroll = false, retryLeft = 1 } = {}) {
+async function loadBox({ resetScroll = false, retryLeft = 1 } = {}) {
   const loadToken = ++boxLoadToken;
   prepareBoxOfficeRender(resetScroll);
-  
   try {
     const data = await fetchNowPlayingWithFallback();
     if (loadToken !== boxLoadToken) return;
 
-    // [버그 수정] 서버가 깨어난 직후 데이터가 섞이지 않도록 여기서 한 번 더 확실히 정렬합니다.
+    // 인기순으로 아예 밖아버림 (데이터 꼬임 방지)
     const list = (data.results || [])
       .sort((a, b) => (b.popularity || 0) - (a.popularity || 0))
       .slice(0, 10);
 
     const fragment = document.createDocumentFragment();
     list.forEach((m, i) => fragment.append(makeCard(m, i + 1)));
-    
     boTrack.replaceChildren(fragment);
     commitBoxOfficeRender(resetScroll);
     
-    clearTimeout(boxRetryTimer);
     markAppReady('box');
     return true;
-  } catch (e) {
+  } catch(e) {
       if (loadToken !== boxLoadToken) return;
       console.error('[CineTMI] chart load failed:', e);
 
