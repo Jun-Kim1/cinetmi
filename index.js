@@ -93,11 +93,18 @@
   }
 
  async function fetchNowPlayingWithFallback() {
+  // 1. 가장 성공 확률이 높은 discover 엔드포인트를 사용합니다.
+  // now_playing보다 파라미터 제약이 적고 데이터가 안정적입니다.
+  const today = new Date().toISOString().slice(0, 10); // 오늘 날짜 (2026-04-14)
+  
   try {
-    // 호출 시점에 정렬 기준을 명시합니다.
-    return await tfetch('/movie/now_playing?language=ko-KR&region=KR&sort_by=popularity.desc');
+    // 현재 상영 중이면서 인기도가 높은 최신 영화만 타겟팅합니다.
+    return await tfetch(`/discover/movie?language=ko-KR&region=KR&sort_by=popularity.desc&primary_release_date.lte=${today}&with_release_type=2|3`);
   } catch (err) {
-    return tfetch('/trending/movie/day?language=ko-KR');
+    console.error('[CineTMI] API 호출 실패:', err);
+    // 2. 만약 이것마저 실패한다면, 트렌딩이 아니라 '인기 영화' 리스트를 가져옵니다.
+    // movie/popular는 쇼생크 같은 고전보다 최신 대중 영화 위주로 구성됩니다.
+    return tfetch('/movie/popular?language=ko-KR&region=KR');
   }
 }
 
