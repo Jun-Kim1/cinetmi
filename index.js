@@ -239,11 +239,15 @@ async function fetchNowPlayingWithFallback() {
     const pop = gpop(m.popularity || 0);
     const yr  = (m.release_date || '').slice(0, 4);
 
-    /* [추가] 제목 언어 폴백 로직: 한국어 제목(m.title)이 없으면 영어/원문(original_title) 사용 */
+    // ───────────────── [여기가 핵심: 러시아어 방어] ─────────────────
+    // 1. 한국어 제목(m.title)에 한글이 한 글자라도 있는지 검사
     const hasKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(m.title || '');
+    
+    // 2. 한글이 있으면 m.title, 없으면 영어 원문인 m.original_title 사용
     const displayTitle = hasKorean 
       ? (m.title || '—') 
       : (m.original_title || m.title || '—');
+    // ────────────────────────────────────────────────────────────
 
     /* genres — up to 2 tags */
     const genreTags = (m.genre_ids || []).slice(0, 2)
@@ -259,7 +263,7 @@ async function fetchNowPlayingWithFallback() {
 
     const poster = m.poster_path ? IMG_BASE + 'w342' + m.poster_path : '';
     
-    // innerHTML 내의 ${esc(m.title)} 부분을 모두 ${esc(displayTitle)}로 바꿨습니다.
+    // [중요] 아래 innerHTML에서 ${esc(m.title)}을 모두 ${esc(displayTitle)}로 바꿨습니다.
     card.innerHTML = `
       <div class="bo-poster-wrap">
         ${poster
