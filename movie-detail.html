@@ -953,6 +953,7 @@
   }
 
   /* ─── Render media ─── */
+  /* ─── Render media (변수명 충돌 완벽 해결 버전) ─── */
   function renderMedia(item, credits) {
     // Cinematic backdrop
     if (item.backdrop_path) {
@@ -967,17 +968,18 @@
     // Badge
     el.badge.innerHTML = `<span class="media-badge ${isTV ? 'mb-tv' : 'mb-movie'}">${isTV ? '📺 TV 시리즈' : '🎬 영화'}</span>`;
 
-    // ───────────────── [수정된 제목 로직] ─────────────────
-    // 1. 한국어 제목(title/name)에 한글이 있는지 검사
+    // ───────────────── [제목 로직: 변수명 통일] ─────────────────
+    // 1. 한국어 제목(item.title/name)에 한글이 있는지 검사
     const hasKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(item.title || item.name || '');
     
-    // 최종적으로 화면에 뿌릴 제목 결정 (변수 선언: const)
-    const displayTitle = hasKorean 
+    // 2. 최종 제목 결정 (hasKorean이 false면 영어 원문인 original_title 사용)
+    const finalTitle = hasKorean 
       ? (item.title || item.name || '—') 
       : (item.original_title || item.original_name || item.title || item.name || '—');
     
-    mediaTitle = displayTitle; // 전역 변수에 저장
-    el.ttl.textContent = displayTitle; // 화면에 출력
+    // 3. 화면 및 전역 변수에 적용 (여기서 title이라는 선언되지 않은 변수를 쓰면 에러남)
+    mediaTitle = finalTitle; 
+    el.ttl.textContent = finalTitle;
     // ──────────────────────────────────────────────────────
 
     // Director / Creator
@@ -1004,8 +1006,8 @@
     // Overview
     el.overview.textContent = item.overview || '줄거리 정보가 없습니다.';
 
-    // Modal chip
-    el.mChip.innerHTML = `<span class="movie-chip">${isTV ? '📺' : '🎬'} ${displayTitle}</span>`;
+    // Modal chip (여기도 finalTitle로 통일)
+    el.mChip.innerHTML = `<span class="movie-chip">${isTV ? '📺' : '🎬'} ${finalTitle}</span>`;
 
     setView('det');
   }
