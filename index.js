@@ -92,18 +92,16 @@
     }, delayMs);
   }
 
- async function fetchNowPlayingWithFallback() {
-  // 1. 가장 성공 확률이 높은 discover 엔드포인트를 사용합니다.
-  // now_playing보다 파라미터 제약이 적고 데이터가 안정적입니다.
-  const today = new Date().toISOString().slice(0, 10); // 오늘 날짜 (2026-04-14)
+async function fetchNowPlayingWithFallback() {
+  const today = new Date().toISOString().slice(0, 10);
   
   try {
-    // 현재 상영 중이면서 인기도가 높은 최신 영화만 타겟팅합니다.
-    return await tfetch(`/discover/movie?language=ko-KR&region=KR&sort_by=popularity.desc&primary_release_date.lte=${today}&with_release_type=2|3`);
+    // with_release_type=3 만 넣어서 '극장(제한)' 영화를 원천 차단합니다.
+    // primary_release_date.lte를 통해 미래 개봉작도 차단합니다.
+    const path = `/discover/movie?language=ko-KR&region=KR&sort_by=popularity.desc&primary_release_date.lte=${today}&with_release_type=3`;
+    return await tfetch(path);
   } catch (err) {
-    console.error('[CineTMI] API 호출 실패:', err);
-    // 2. 만약 이것마저 실패한다면, 트렌딩이 아니라 '인기 영화' 리스트를 가져옵니다.
-    // movie/popular는 쇼생크 같은 고전보다 최신 대중 영화 위주로 구성됩니다.
+    console.warn('[CineTMI] API 호출 실패, 인기 영화로 대체');
     return tfetch('/movie/popular?language=ko-KR&region=KR');
   }
 }
@@ -309,27 +307,28 @@
 
   /* ─── Load box office ─── */
  async function loadBox({ resetScroll = false, retryLeft = 1 } = {}) {
-    const loadToken = ++boxLoadToken;
-    prepareBoxOfficeRender(resetScroll);
-    try {
-      const data = await fetchNowPlayingWithFallback();
-      if (loadToken !== boxLoadToken) return;
+  const loadToken = ++boxLoadToken;
+  prepareBoxOfficeRender(resetScroll);
+  
+  try {
+    const data = await fetchNowPlayingWithFallback();
+    if (loadToken !== boxLoadToken) return;
 
-      // [수정된 부분]: 데이터를 가져온 직후, 인기도(popularity) 기준으로 확실하게 내림차순 정렬을 수행합니다.
-      // 이렇게 해야 10초 만에 새로고침해도 영화 순서가 무작위로 바뀌는 현상을 막을 수 있습니다.
-      const list = (data.results || [])
-        .sort((a, b) => (b.popularity || 0) - (a.popularity || 0)) // 인기도 높은 순으로 정렬
-        .slice(0, 10); // 상위 10개 추출
+    // [버그 수정] 서버가 깨어난 직후 데이터가 섞이지 않도록 여기서 한 번 더 확실히 정렬합니다.
+    const list = (data.results || [])
+      .sort((a, b) => (b.popularity || 0) - (a.popularity || 0)) // 인기도 내림차순 정렬
+      .slice(0, 10);
 
-      const fragment = document.createDocumentFragment();
-      list.forEach((m, i) => fragment.append(makeCard(m, i + 1)));
-      boTrack.replaceChildren(fragment);
-      commitBoxOfficeRender(resetScroll);
-      
-      clearTimeout(boxRetryTimer);
-      markAppReady('box');
-      return true;
-    } catch(e) {
+    const fragment = document.createDocumentFragment();
+    list.forEach((m, i) => fragment.append(makeCard(m, i + 1)));
+    
+    boTrack.replaceChildren(fragment);
+    commitBoxOfficeRender(resetScroll);
+    
+    clearTimeout(boxRetryTimer);
+    markAppReady('box');
+    return true;
+  } catch (e) {
       if (loadToken !== boxLoadToken) return;
       console.error('[CineTMI] chart load failed:', e);
 
