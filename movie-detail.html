@@ -971,14 +971,14 @@
     // 1. 한국어 제목(title/name)에 한글이 있는지 검사
     const hasKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(item.title || item.name || '');
     
-    // 2. 한글이 있으면 그대로 쓰고, 없으면 원문(original_title) 사용
+    // 최종적으로 화면에 뿌릴 제목 결정 (변수 선언: const)
     const displayTitle = hasKorean 
       ? (item.title || item.name || '—') 
       : (item.original_title || item.original_name || item.title || item.name || '—');
     
-    mediaTitle = displayTitle;
-    el.ttl.textContent = displayTitle;
-    // ──────────────────────────────────────────────────
+    mediaTitle = displayTitle; // 전역 변수에 저장
+    el.ttl.textContent = displayTitle; // 화면에 출력
+    // ──────────────────────────────────────────────────────
 
     // Director / Creator
     if (isTV) {
@@ -994,24 +994,18 @@
     el.lblDate.textContent = isTV ? '방영' : '개봉';
     el.valDate.textContent = fmtDate(item.release_date || item.first_air_date);
 
-    // Rating (color-coded)
+    // Rating
     const vr = item.vote_average || 0;
     const rCol = vr >= 8 ? '#ccff00' : vr >= 7 ? '#a3e635' : vr >= 6 ? '#facc15' : vr >= 5 ? '#f97316' : '#f87171';
     el.valRat.innerHTML = vr
       ? `<span style="color:${rCol};font-weight:700">⭐ ${vr.toFixed(1)}</span><span style="color:rgba(255,255,255,.35);font-weight:400"> / 10</span>`
       : '—';
 
-    // Seasons (TV only)
-    if (isTV && item.number_of_seasons) {
-      el.rowSeas.style.display = 'flex';
-      el.valSeas.textContent   = item.number_of_seasons + '시즌';
-    }
-
     // Overview
     el.overview.textContent = item.overview || '줄거리 정보가 없습니다.';
 
     // Modal chip
-    el.mChip.innerHTML = `<span class="movie-chip">${isTV ? '📺' : '🎬'} ${title}</span>`;
+    el.mChip.innerHTML = `<span class="movie-chip">${isTV ? '📺' : '🎬'} ${displayTitle}</span>`;
 
     setView('det');
   }
