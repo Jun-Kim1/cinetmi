@@ -20,9 +20,9 @@ if (!TMDB_KEY) {
  * ALLOWED_ORIGINS behavior:
  * - '*'                      => allow all origins
  * - 'https://a.com,https://b.com' => allow listed origins
- * - unset                    => default allow GitHub Pages origin
+ * - unset                    => default allow InFilm + GitHub Pages origins
  */
-const defaultOrigins = ['https://jun-kim1.github.io'];
+const defaultOrigins = ['https://infilm.onrender.com', 'https://jun-kim1.github.io'];
 const envOriginsRaw = process.env.ALLOWED_ORIGINS;
 const envOrigins = envOriginsRaw
   ? envOriginsRaw.split(',').map(s => s.trim()).filter(Boolean)
@@ -120,4 +120,5 @@ app.use((req, res) => {
 
 app.listen(PORT, () => {
   console.log(`[CineTMI] Server running on port ${PORT}`);
+  console.log('Allowed Origins:', process.env.ALLOWED_ORIGINS);
 });
