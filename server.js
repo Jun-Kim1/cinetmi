@@ -138,7 +138,7 @@ app.post('/api/tmi-posts', async (req, res) => {
   }
 
   const { nickname, password, category, content, content_id } = req.body || {};
-  const allowedCategories = new Set(['homage', 'story', 'directing', 'acting', 'mise_en_scene', 'behind', 'chat']);
+  const allowedCategories = new Set(['오마주', '스토리', '감독', '배우', '미장센', '비하인드', '잡담']);
 
   if (!nickname || !category || !content || !content_id) {
     return res.status(400).json({ message: 'nickname, category, content, content_id are required' });
