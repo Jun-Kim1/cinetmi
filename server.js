@@ -1,14 +1,23 @@
 'use strict';
 
-const express = require('express');
-const cors    = require('cors');
-const axios   = require('axios');
-const path    = require('path');
+const express    = require('express');
+const cors       = require('cors');
+const axios      = require('axios');
+const path       = require('path');
+const crypto     = require('crypto');
+const { createClient } = require('@supabase/supabase-js');
 
 const app      = express();
 const PORT     = process.env.PORT || 3000;
 const TMDB_KEY = process.env.TMDB_API_KEY;
 const TMDB_BASE = 'https://api.themoviedb.org/3';
+
+const CINETMI_SUPABASE_URL              = process.env.CINETMI_SUPABASE_URL;
+const CINETMI_SUPABASE_SERVICE_ROLE_KEY = process.env.CINETMI_SUPABASE_SERVICE_ROLE_KEY;
+
+const cineSb = (CINETMI_SUPABASE_URL && CINETMI_SUPABASE_SERVICE_ROLE_KEY)
+  ? createClient(CINETMI_SUPABASE_URL, CINETMI_SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } })
+  : null;
 
 /* ── Startup guard ── */
 if (!TMDB_KEY) {
@@ -37,7 +46,7 @@ const corsOptions = {
     if (envOrigins.includes(origin)) return cb(null, true);
     return cb(new Error('Not allowed by CORS'));
   },
-  methods: ['GET', 'OPTIONS'],
+  methods: ['GET', 'POST', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 204,
 };
@@ -113,6 +122,63 @@ app.get('/api/tmdb/*', async (req, res) => {
   }
 });
 
+/* ── tmi_posts save  POST /api/tmi-posts ── */
+function hashPassword(password) {
+  const iterations = 120000;
+  const salt = crypto.randomBytes(16);
+  const hash = crypto.pbkdf2Sync(password, salt, iterations, 32, 'sha256');
+  return `pbkdf2_sha256$${iterations}$${salt.toString('base64')}$${hash.toString('base64')}`;
+}
+
+app.use(express.json());
+
+app.post('/api/tmi-posts', async (req, res) => {
+  if (!cineSb) {
+    return res.status(500).json({ message: 'CINETMI_SUPABASE_URL / KEY env vars not set' });
+  }
+
+  const { nickname, password, category, content, content_id } = req.body || {};
+  const allowedCategories = new Set(['homage', 'story', 'directing', 'acting', 'mise_en_scene', 'behind', 'chat']);
+
+  if (!nickname || !category || !content || !content_id) {
+    return res.status(400).json({ message: 'nickname, category, content, content_id are required' });
+  }
+  if (!password || typeof password !== 'string' || password.length < 8) {
+    return res.status(400).json({ message: 'password must be at least 8 characters' });
+  }
+  if (!allowedCategories.has(String(category))) {
+    return res.status(400).json({ message: 'invalid category' });
+  }
+
+  const cleanNickname  = String(nickname).trim();
+  const cleanContent   = String(content).trim();
+  const cleanContentId = Number(content_id);
+
+  if (!cleanNickname || cleanNickname.length > 40) {
+    return res.status(400).json({ message: 'nickname must be 1–40 characters' });
+  }
+  if (!cleanContent || cleanContent.length < 4 || cleanContent.length > 500) {
+    return res.status(400).json({ message: 'content must be 4–500 characters' });
+  }
+  if (!Number.isFinite(cleanContentId) || cleanContentId <= 0) {
+    return res.status(400).json({ message: 'content_id must be a positive number' });
+  }
+
+  try {
+    const { error } = await cineSb.from('tmi_posts').insert({
+      nickname:   cleanNickname,
+      password:   hashPassword(password),
+      category,
+      content:    cleanContent,
+      content_id: cleanContentId,
+    });
+    if (error) return res.status(500).json({ message: error.message });
+    return res.status(201).json({ ok: true });
+  } catch (_err) {
+    return res.status(500).json({ message: 'save failed' });
+  }
+});
+
 /* ── 404 handler ── */
 app.use((req, res) => {
   res.status(404).json({ error: 'Not found' });
@@ -121,4 +187,5 @@ app.use((req, res) => {
 app.listen(PORT, () => {
   console.log(`[CineTMI] Server running on port ${PORT}`);
   console.log('Allowed Origins:', process.env.ALLOWED_ORIGINS);
+  console.log('CINETMI_SUPABASE_URL set:', Boolean(CINETMI_SUPABASE_URL));
 });
