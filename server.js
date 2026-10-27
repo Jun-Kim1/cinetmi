@@ -68,6 +68,7 @@ app.use((req, res, next) => {
 /* ── Health check — used by the frontend to detect cold-start wake-up ── */
 app.get('/api/health', (_req, res) => {
   res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('X-CineTMI-Node-Version', process.version);
   res.end('ok');
 });
 
